@@ -1,5 +1,5 @@
 const { createRental, getAllRentals, updateRental, deleteRental } = require("../services/rental.service");
-const { createControllerLogger } = require("../middlewares/logger");
+const { createControllerLogger } = require("../utils/logger");
 const logger = createControllerLogger("rentalController");
 
 const create = async (req, res) => {

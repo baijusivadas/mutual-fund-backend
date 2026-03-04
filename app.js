@@ -24,7 +24,7 @@ app.get("/", (req, res) =>
 );
 
 app.use("/api", transactionRoute);
-app.use("/api", authRoute);
+app.use("/api/auth", authRoute);
 app.use("/api", roleRoute);
 app.use("/api", goldRoute);
 app.use("/api", flatRoute);

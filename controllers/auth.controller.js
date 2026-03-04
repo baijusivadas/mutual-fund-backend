@@ -1,42 +1,42 @@
-const { register, login, getAllUsers } = require("../services/auth.service");
-const { createControllerLogger } = require("../middlewares/logger");
+const { signup, verifyOTP, login, forgotPassword, getAllUsers } = require("../services/auth.service");
+const { createControllerLogger } = require("../utils/logger");
 const logger = createControllerLogger("authController");
 
-const registerUser = async (req, res) => {
-    try {
-        const result = await register(req.body);
-        logger.info(`User registered: ${result.auth.email}`);
-        res.status(201).json(result);
-    } catch (err) {
-        logger.error(`Registration error: ${err.message}`);
-        res.status(400).json({ error: err.message });
-    }
+const signupUser = async (req, res) => {
+    const result = await signup(req.body);
+    logger.info(`User signup initiated: ${req.body.email}`);
+    res.status(201).json(result);
+};
+
+const verifyUserOTP = async (req, res) => {
+    const { email, otp } = req.body;
+    const result = await verifyOTP(email, otp);
+    logger.info(`User OTP verified: ${email}`);
+    res.json(result);
 };
 
 const loginUser = async (req, res) => {
-    try {
-        const { email, password } = req.body;
-        const result = await login(email, password);
-        logger.info(`User logged in: ${email}`);
-        res.json(result);
-    } catch (err) {
-        logger.error(`Login error: ${err.message}`);
-        res.status(401).json({ error: err.message });
-    }
+    const { email, password } = req.body;
+    const result = await login(email, password);
+    logger.info(`User logged in: ${email}`);
+    res.json(result);
+};
+
+const forgotUserPassword = async (req, res) => {
+    const { email } = req.body;
+    const result = await forgotPassword(email);
+    res.json(result);
 };
 
 const getUsers = async (req, res) => {
-    try {
-        const users = await getAllUsers();
-        res.json(users);
-    } catch (err) {
-        logger.error(`Fetch users error: ${err.message}`);
-        res.status(500).json({ error: "Failed to fetch users" });
-    }
+    const users = await getAllUsers();
+    res.json(users);
 };
 
 module.exports = {
-    registerUser,
+    signupUser,
+    verifyUserOTP,
     loginUser,
+    forgotUserPassword,
     getUsers
 };

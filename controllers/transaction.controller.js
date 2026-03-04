@@ -3,7 +3,7 @@ const {
   processTransaction,
   calculateXirr,
 } = require("../services/transaction.service");
-const { createControllerLogger } = require("../middlewares/logger");
+const { createControllerLogger } = require("../utils/logger");
 
 // 🔹 Create logger for this controller
 const logger = createControllerLogger("transactionController");

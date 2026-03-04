@@ -1,5 +1,5 @@
 const { createRole, getRoles, updateRole, deleteRole } = require("../services/role.service");
-const { createControllerLogger } = require("../middlewares/logger");
+const { createControllerLogger } = require("../utils/logger");
 const logger = createControllerLogger("roleController");
 
 const create = async (req, res) => {

@@ -1,5 +1,5 @@
 const { createGold, getAllGold, updateGold, deleteGold } = require("../services/gold.service");
-const { createControllerLogger } = require("../middlewares/logger");
+const { createControllerLogger } = require("../utils/logger");
 const logger = createControllerLogger("goldController");
 
 const create = async (req, res) => {

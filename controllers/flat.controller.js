@@ -1,5 +1,5 @@
 const { createFlat, getAllFlats, updateFlat, deleteFlat } = require("../services/flat.service");
-const { createControllerLogger } = require("../middlewares/logger");
+const { createControllerLogger } = require("../utils/logger");
 const logger = createControllerLogger("flatController");
 
 const create = async (req, res) => {
