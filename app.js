@@ -1,3 +1,5 @@
+require("dotenv").config();
+require("express-async-errors");
 const express = require("express");
 const helmet = require("helmet");
 const cors = require("cors");
@@ -9,8 +11,6 @@ const flatRoute = require("./routes/flat.route");
 const rentalRoute = require("./routes/rental.route");
 const transactionRoute = require("./routes/transaction.route");
 const errorHandler = require("./middlewares/errorHandler");
-require("dotenv").config();
-require("express-async-errors");
 
 const app = express();
 app.use(helmet());

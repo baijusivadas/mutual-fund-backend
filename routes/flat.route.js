@@ -1,14 +1,14 @@
 const express = require("express");
-const { create, getAll, update, remove } = require("../controllers/flat.controller");
+const { createFlatItem, getAllFlatItems, updateFlatItem, deleteFlatItem } = require("../controllers/flat.controller");
 const authenticate = require("../middlewares/auth.middleware");
 const authorize = require("../middlewares/role.middleware");
 
 const router = express.Router();
 
 // Apply authorization for 'superAdmin' to each route
-router.post("/flats", authenticate, authorize("superAdmin"), create);
-router.get("/flats", authenticate, authorize("superAdmin"), getAll);
-router.put("/flats/:id", authenticate, authorize("superAdmin"), update);
-router.delete("/flats/:id", authenticate, authorize("superAdmin"), remove);
+router.post("/flat", authenticate, authorize(), createFlatItem);
+router.get("/flat", authenticate, authorize(), getAllFlatItems);
+router.put("/flat/:id", authenticate, authorize(), updateFlatItem);
+router.delete("/flat/:id", authenticate, authorize(), deleteFlatItem);
 
 module.exports = router;

@@ -1,53 +1,53 @@
-const { createFlat, getAllFlats, updateFlat, deleteFlat } = require("../services/flat.service");
+const flatService = require("../services/flat.service");
 const { createControllerLogger } = require("../utils/logger");
 const logger = createControllerLogger("flatController");
 
-const create = async (req, res) => {
+const createFlatItem = async (req, res, next) => {
     try {
-        const flat = await createFlat(req.body);
+        const flat = await flatService.createFlatItem(req.body);
         logger.info("Flat created");
         res.status(201).json(flat);
     } catch (err) {
         logger.error(`Create flat error: ${err.message}`);
-        res.status(400).json({ error: err.message });
+        next(err);
     }
 };
 
-const getAll = async (req, res) => {
+const getAllFlatItems = async (req, res, next) => {
     try {
-        const flats = await getAllFlats();
+        const flats = await flatService.getAllFlatItems();
         res.json(flats);
     } catch (err) {
         logger.error(`Get flats error: ${err.message}`);
-        res.status(500).json({ error: "Failed to fetch flats" });
+        next(err);
     }
 };
 
-const update = async (req, res) => {
+const updateFlatItem = async (req, res, next) => {
     try {
-        const flat = await updateFlat(req.params.id, req.body);
+        const flat = await flatService.updateFlatItem(req.params.id, req.body);
         logger.info("Flat updated");
         res.json(flat);
     } catch (err) {
         logger.error(`Update flat error: ${err.message}`);
-        res.status(400).json({ error: err.message });
+        next(err);
     }
 };
 
-const remove = async (req, res) => {
+const deleteFlatItem = async (req, res, next) => {
     try {
-        await deleteFlat(req.params.id);
+        await flatService.deleteFlatItem(req.params.id);
         logger.info("Flat deleted");
         res.json({ message: "Flat deleted successfully" });
     } catch (err) {
         logger.error(`Delete flat error: ${err.message}`);
-        res.status(400).json({ error: err.message });
+        next(err);
     }
 };
 
 module.exports = {
-    create,
-    getAll,
-    update,
-    remove
+    createFlatItem,
+    getAllFlatItems,
+    updateFlatItem,
+    deleteFlatItem
 };

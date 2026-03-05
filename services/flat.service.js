@@ -1,6 +1,6 @@
 const { flats } = require("../models");
 
-const createFlat = async (data) => {
+const createFlatItem = async (data) => {
     return await flats.create({
         id: require("crypto").randomUUID(),
         ...data,
@@ -8,25 +8,25 @@ const createFlat = async (data) => {
     });
 };
 
-const getAllFlats = async () => {
+const getAllFlatItems = async () => {
     return await flats.findAll();
 };
 
-const updateFlat = async (id, data) => {
+const updateFlatItem = async (id, data) => {
     const flat = await flats.findByPk(id);
     if (!flat) throw new Error("Flat not found");
     return await flat.update({ ...data, updated_at: new Date() });
 };
 
-const deleteFlat = async (id) => {
+const deleteFlatItem = async (id) => {
     const flat = await flats.findByPk(id);
     if (!flat) throw new Error("Flat not found");
     return await flat.destroy();
 };
 
 module.exports = {
-    createFlat,
-    getAllFlats,
-    updateFlat,
-    deleteFlat
+    createFlatItem,
+    getAllFlatItems,
+    updateFlatItem,
+    deleteFlatItem
 };

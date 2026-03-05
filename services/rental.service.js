@@ -1,6 +1,6 @@
 const { rental_properties } = require("../models");
 
-const createRental = async (data) => {
+const createRentalItem = async (data) => {
     return await rental_properties.create({
         id: require("crypto").randomUUID(),
         ...data,
@@ -8,25 +8,25 @@ const createRental = async (data) => {
     });
 };
 
-const getAllRentals = async () => {
+const getAllRentalItems = async () => {
     return await rental_properties.findAll();
 };
 
-const updateRental = async (id, data) => {
+const updateRentalItem = async (id, data) => {
     const rental = await rental_properties.findByPk(id);
     if (!rental) throw new Error("Rental property not found");
     return await rental.update({ ...data, updated_at: new Date() });
 };
 
-const deleteRental = async (id) => {
+const deleteRentalItem = async (id) => {
     const rental = await rental_properties.findByPk(id);
     if (!rental) throw new Error("Rental property not found");
     return await rental.destroy();
 };
 
 module.exports = {
-    createRental,
-    getAllRentals,
-    updateRental,
-    deleteRental
+    createRentalItem,
+    getAllRentalItems,
+    updateRentalItem,
+    deleteRentalItem
 };

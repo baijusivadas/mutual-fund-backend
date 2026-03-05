@@ -8,7 +8,7 @@ const createRole = async (roleData) => {
     });
 };
 
-const getRoles = async () => {
+const getAllRoles = async () => {
     return await roles.findAll();
 };
 
@@ -26,7 +26,7 @@ const deleteRole = async (id) => {
 
 module.exports = {
     createRole,
-    getRoles,
+    getAllRoles,
     updateRole,
     deleteRole
 };

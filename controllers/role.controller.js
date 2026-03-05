@@ -1,53 +1,53 @@
-const { createRole, getRoles, updateRole, deleteRole } = require("../services/role.service");
+const roleService = require("../services/role.service");
 const { createControllerLogger } = require("../utils/logger");
 const logger = createControllerLogger("roleController");
 
-const create = async (req, res) => {
+const createRole = async (req, res, next) => {
     try {
-        const role = await createRole(req.body);
+        const role = await roleService.createRole(req.body);
         logger.info("Role created");
         res.status(201).json(role);
     } catch (err) {
         logger.error(`Create role error: ${err.message}`);
-        res.status(400).json({ error: err.message });
+        next(err);
     }
 };
 
-const getAll = async (req, res) => {
+const getAllRoles = async (req, res, next) => {
     try {
-        const roles = await getRoles();
+        const roles = await roleService.getAllRoles();
         res.json(roles);
     } catch (err) {
         logger.error(`Get roles error: ${err.message}`);
-        res.status(500).json({ error: "Failed to fetch roles" });
+        next(err);
     }
 };
 
-const update = async (req, res) => {
+const updateRole = async (req, res, next) => {
     try {
-        const role = await updateRole(req.params.id, req.body);
+        const role = await roleService.updateRole(req.params.id, req.body);
         logger.info("Role updated");
         res.json(role);
     } catch (err) {
         logger.error(`Update role error: ${err.message}`);
-        res.status(400).json({ error: err.message });
+        next(err);
     }
 };
 
-const remove = async (req, res) => {
+const deleteRole = async (req, res, next) => {
     try {
-        await deleteRole(req.params.id);
+        await roleService.deleteRole(req.params.id);
         logger.info("Role deleted");
         res.json({ message: "Role deleted successfully" });
     } catch (err) {
         logger.error(`Delete role error: ${err.message}`);
-        res.status(400).json({ error: err.message });
+        next(err);
     }
 };
 
 module.exports = {
-    create,
-    getAll,
-    update,
-    remove
+    createRole,
+    getAllRoles,
+    updateRole,
+    deleteRole
 };

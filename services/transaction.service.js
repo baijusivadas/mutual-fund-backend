@@ -2,7 +2,7 @@ const { xirr } = require("xirr");
 const xlsx = require("xlsx");
 const { User, Scheme, Transaction } = require("../models");
 
-const processTransaction = async (filePath) => {
+const processTransactionFile = async (filePath) => {
   const workbook = xlsx.readFile(filePath);
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   const data = xlsx.utils.sheet_to_json(sheet);
@@ -50,7 +50,7 @@ const processTransaction = async (filePath) => {
   return { count: transactions.length, transactions };
 };
 
-const calculateXirr = async (cashFlows) => {
+const calculateTransactionsXirr = async (cashFlows) => {
   // XIRR calculation logic goes here
   const users = await User.findAll({ include: Transaction });
 
@@ -75,6 +75,6 @@ const calculateXirr = async (cashFlows) => {
 };
 
 module.exports = {
-  calculateXirr,
-  processTransaction,
+  calculateTransactionsXirr,
+  processTransactionFile,
 };

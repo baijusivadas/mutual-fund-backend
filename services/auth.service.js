@@ -2,6 +2,7 @@ const { auth_users, pending_users, active_sessions, User, user_roles } = require
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
+const { logger } = require("../utils/logger");
 
 const signup = async (userData) => {
     const { email, password } = userData;
@@ -32,7 +33,7 @@ const signup = async (userData) => {
         });
     }
 
-    console.log(`[AUTH] OTP for ${email}: ${otp}`); // For demo purposes
+    logger.info(`[AUTH] OTP for ${email}: ${otp}`);
     return { message: "OTP sent to email", email };
 };
 
@@ -59,7 +60,7 @@ const verifyOTP = async (email, otp) => {
 
     await User.create({
         name: email.split('@')[0],
-        folio: email.split('@')[0] + '-FOLIO', // Added missing folio
+        folio: email.split('@')[0] + '-FOLIO',
         auth_user_id: newAuthUser.id,
     });
 
@@ -106,15 +107,10 @@ const forgotPassword = async (email) => {
     }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpires = new Date(Date.now() + 10 * 60000);
-
-    // Reusing pending_users table for password reset OTPs or adding a new table?
-    // Let's use it for simplicity for now, but usually it's a separate reset_tokens table.
-    // Actually, let's just return a link in the response for simulation.
     const resetToken = crypto.randomBytes(32).toString('hex');
 
-    console.log(`[AUTH] Reset OTP for ${email}: ${otp}`);
-    console.log(`[AUTH] Reset Link: http://localhost:5173/reset-password?email=${email}&token=${resetToken}`);
+    logger.info(`[AUTH] Reset OTP for ${email}: ${otp}`);
+    logger.info(`[AUTH] Reset Link: http://localhost:5173/reset-password?email=${email}&token=${resetToken}`);
 
     return { message: "Reset instructions sent", email, otp };
 };

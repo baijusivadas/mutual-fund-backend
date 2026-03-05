@@ -1,53 +1,53 @@
-const { createGold, getAllGold, updateGold, deleteGold } = require("../services/gold.service");
+const goldService = require("../services/gold.service");
 const { createControllerLogger } = require("../utils/logger");
 const logger = createControllerLogger("goldController");
 
-const create = async (req, res) => {
+const createGoldItem = async (req, res, next) => {
     try {
-        const item = await createGold(req.body);
+        const item = await goldService.createGoldItem(req.body);
         logger.info("Gold item created");
         res.status(201).json(item);
     } catch (err) {
         logger.error(`Create gold error: ${err.message}`);
-        res.status(400).json({ error: err.message });
+        next(err);
     }
 };
 
-const getAll = async (req, res) => {
+const getAllGoldItems = async (req, res, next) => {
     try {
-        const items = await getAllGold();
+        const items = await goldService.getAllGoldItems();
         res.json(items);
     } catch (err) {
         logger.error(`Get gold error: ${err.message}`);
-        res.status(500).json({ error: "Failed to fetch gold items" });
+        next(err);
     }
 };
 
-const update = async (req, res) => {
+const updateGoldItem = async (req, res, next) => {
     try {
-        const item = await updateGold(req.params.id, req.body);
+        const item = await goldService.updateGoldItem(req.params.id, req.body);
         logger.info("Gold item updated");
         res.json(item);
     } catch (err) {
         logger.error(`Update gold error: ${err.message}`);
-        res.status(400).json({ error: err.message });
+        next(err);
     }
 };
 
-const remove = async (req, res) => {
+const deleteGoldItem = async (req, res, next) => {
     try {
-        await deleteGold(req.params.id);
+        await goldService.deleteGoldItem(req.params.id);
         logger.info("Gold item deleted");
         res.json({ message: "Gold item deleted successfully" });
     } catch (err) {
         logger.error(`Delete gold error: ${err.message}`);
-        res.status(400).json({ error: err.message });
+        next(err);
     }
 };
 
 module.exports = {
-    create,
-    getAll,
-    update,
-    remove
+    createGoldItem,
+    getAllGoldItems,
+    updateGoldItem,
+    deleteGoldItem
 };
