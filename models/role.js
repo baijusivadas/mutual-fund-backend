@@ -12,5 +12,14 @@ module.exports = (sequelize, DataTypes) => {
     },
     { timestamps: false }
   );
+
+  roles.associate = (models) => {
+    roles.belongsToMany(models.sidebar_items, {
+      through: "role_sidebar_items",
+      foreignKey: "role_id",
+      otherKey: "sidebar_item_id",
+    });
+  };
+
   return roles;
 };

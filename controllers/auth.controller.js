@@ -50,10 +50,35 @@ const forgotUserPassword = async (req, res, next) => {
 
 const getUsers = async (req, res, next) => {
     try {
-        const users = await authService.getAllUsers();
+        const users = await authService.getAllUsersWithRoles();
         res.json(users);
     } catch (err) {
         logger.error(`Get users error: ${err.message}`);
+        next(err);
+    }
+};
+
+const updateUserRole = async (req, res, next) => {
+    try {
+        const { userId } = req.params;
+        const { role } = req.body;
+        const result = await authService.updateUserRole(userId, role);
+        logger.info(`User role updated: ${userId} to ${role}`);
+        res.json(result);
+    } catch (err) {
+        logger.error(`Update user role error: ${err.message}`);
+        next(err);
+    }
+};
+
+const deleteUser = async (req, res, next) => {
+    try {
+        const { userId } = req.params;
+        await authService.deleteUser(userId);
+        logger.info(`User deleted: ${userId}`);
+        res.json({ message: "User deleted successfully" });
+    } catch (err) {
+        logger.error(`Delete user error: ${err.message}`);
         next(err);
     }
 };
@@ -63,5 +88,7 @@ module.exports = {
     verifyUserOTP,
     loginUser,
     forgotUserPassword,
-    getUsers
+    getUsers,
+    updateUserRole,
+    deleteUser
 };

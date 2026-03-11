@@ -115,10 +115,44 @@ const forgotPassword = async (email) => {
     return { message: "Reset instructions sent", email, otp };
 };
 
-const getAllUsers = async () => {
-    return await User.findAll({
-        include: [{ model: auth_users, as: 'auth_user' }]
+const getAllUsersWithRoles = async () => {
+    const users = await User.findAll();
+    const roles = await user_roles.findAll();
+    const authUsers = await auth_users.findAll();
+
+    return users.map(user => {
+        const authUser = authUsers.find(au => au.id === user.auth_user_id);
+        const userRole = roles.find(r => r.user_id === user.auth_user_id);
+        return {
+            id: user.auth_user_id,
+            email: authUser ? authUser.email : 'N/A',
+            full_name: user.name,
+            role: userRole ? userRole.role : 'user',
+            created_at: user.created_at
+        };
     });
+};
+
+const updateUserRole = async (userId, newRole) => {
+    const userRoleRecord = await user_roles.findOne({ where: { user_id: userId } });
+    if (userRoleRecord) {
+        return await userRoleRecord.update({ role: newRole });
+    } else {
+        return await user_roles.create({
+            id: crypto.randomUUID(),
+            user_id: userId,
+            role: newRole,
+            created_at: new Date()
+        });
+    }
+};
+
+const deleteUser = async (userId) => {
+    // Delete in sequence to maintain integrity (though cascades might handle some)
+    await user_roles.destroy({ where: { user_id: userId } });
+    await active_sessions.destroy({ where: { auth_user_id: userId } });
+    await User.destroy({ where: { auth_user_id: userId } });
+    return await auth_users.destroy({ where: { id: userId } });
 };
 
 module.exports = {
@@ -126,5 +160,7 @@ module.exports = {
     verifyOTP,
     login,
     forgotPassword,
-    getAllUsers
+    getAllUsersWithRoles,
+    updateUserRole,
+    deleteUser
 };
