@@ -17,8 +17,9 @@ const createItem = async (req, res, next) => {
 const getAllItems = async (req, res, next) => {
     try {
         const { entity } = req.params;
-        const items = await advancedService.getAllItems(entity, req.user.id, req.user.role);
-        res.json(items);
+        const { page = 1, limit = 20 } = req.query;
+        const result = await advancedService.getAllItems(entity, req.user.id, req.user.role, page, limit);
+        res.json(result);
     } catch (err) {
         logger.error(`Get ${req.params.entity} error: ${err.message}`);
         next(err);

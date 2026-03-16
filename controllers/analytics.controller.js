@@ -58,15 +58,18 @@ const getPortfolioMetrics = async (req, res, next) => {
             revenueData: Array.from({ length: 6 }, (_, i) => {
                 const date = new Date();
                 date.setMonth(date.getMonth() - (5 - i));
-                const monthName = date.toLocaleDateString('en-US', { month: 'short' });
-                // Simple revenue trend: current revenue with some variance for mock history
-                const currentRevenue = rentalProperties
-                    .filter(p => p.status === 'occupied')
+                const monthName = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+                // Aggregate actual occupied rental revenue for each month
+                // Properties occupied during a given month contribute their monthly_rent
+                const monthRevenue = rentalProperties
+                    .filter(p => {
+                        if (p.status !== 'occupied') return false;
+                        // Include if the property was created before or during this month
+                        const created = p.created_at ? new Date(p.created_at) : null;
+                        return !created || created <= new Date(date.getFullYear(), date.getMonth() + 1, 0);
+                    })
                     .reduce((sum, item) => sum + parseFloat(item.monthly_rent || 0), 0);
-                return {
-                    month: monthName,
-                    revenue: currentRevenue * (0.85 + Math.random() * 0.3)
-                };
+                return { month: monthName, revenue: monthRevenue };
             })
         };
 

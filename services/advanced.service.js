@@ -17,7 +17,6 @@ const ALLOWED_ENTITIES = [
 ];
 
 const getModel = (entityName, userRole) => {
-    // If superAdmin, check if the model exists in db, otherwise check ALLOWED_ENTITIES
     if (userRole === 'superAdmin') {
         if (!db[entityName]) {
             throw new Error(`Entity ${entityName} does not exist in database`);
@@ -36,10 +35,38 @@ const createItem = async (entityName, data, userId, userRole) => {
     return await model.create({ ...data, created_by: userId });
 };
 
-const getAllItems = async (entityName, userId, userRole) => {
+/**
+ * Get all items with pagination support.
+ * @param {string} entityName
+ * @param {string} userId
+ * @param {string} userRole
+ * @param {number} page  - 1-based page number (default: 1)
+ * @param {number} limit - records per page (default: 20, max: 100)
+ */
+const getAllItems = async (entityName, userId, userRole, page = 1, limit = 20) => {
     const model = getModel(entityName, userRole);
     const where = userRole === 'superAdmin' ? {} : { created_by: userId };
-    return await model.findAll({ where });
+
+    // Clamp limit to prevent overly large queries
+    const safeLimit = Math.min(Math.max(parseInt(limit) || 20, 1), 100);
+    const safeOffset = (Math.max(parseInt(page) || 1, 1) - 1) * safeLimit;
+
+    const { count, rows } = await model.findAndCountAll({
+        where,
+        limit: safeLimit,
+        offset: safeOffset,
+        order: [['created_at', 'DESC']],
+    });
+
+    return {
+        data: rows,
+        pagination: {
+            total: count,
+            page: Math.max(parseInt(page) || 1, 1),
+            limit: safeLimit,
+            totalPages: Math.ceil(count / safeLimit),
+        },
+    };
 };
 
 const updateItem = async (entityName, id, data, userId, userRole) => {

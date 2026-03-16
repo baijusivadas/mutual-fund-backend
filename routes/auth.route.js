@@ -6,7 +6,8 @@ const {
     deleteUser,
     signupUser,
     verifyUserOTP,
-    loginUser
+    loginUser,
+    logoutUser
 } = require("../controllers/auth.controller");
 const authenticate = require("../middlewares/auth.middleware");
 const authorize = require("../middlewares/role.middleware");
@@ -15,6 +16,7 @@ const router = express.Router();
 router.post("/signup", signupUser);
 router.post("/verify-otp", verifyUserOTP);
 router.post("/login", loginUser);
+router.post("/logout", authenticate, logoutUser);
 router.post("/forgot-password", forgotUserPassword);
 
 // Admin routes

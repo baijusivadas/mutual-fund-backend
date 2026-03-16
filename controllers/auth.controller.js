@@ -74,11 +74,24 @@ const updateUserRole = async (req, res, next) => {
 const deleteUser = async (req, res, next) => {
     try {
         const { userId } = req.params;
-        await authService.deleteUser(userId);
+        const result = await authService.deleteUser(userId);
         logger.info(`User deleted: ${userId}`);
-        res.json({ message: "User deleted successfully" });
+        res.json(result);
     } catch (err) {
         logger.error(`Delete user error: ${err.message}`);
+        next(err);
+    }
+};
+
+const logoutUser = async (req, res, next) => {
+    try {
+        const token = req.headers.authorization?.split(" ")[1];
+        if (!token) return res.status(400).json({ error: "No token provided" });
+        const result = await authService.logout(token);
+        logger.info(`User logged out: ${req.user?.email}`);
+        res.json(result);
+    } catch (err) {
+        logger.error(`Logout error: ${err.message}`);
         next(err);
     }
 };
@@ -87,6 +100,7 @@ module.exports = {
     signupUser,
     verifyUserOTP,
     loginUser,
+    logoutUser,
     forgotUserPassword,
     getUsers,
     updateUserRole,

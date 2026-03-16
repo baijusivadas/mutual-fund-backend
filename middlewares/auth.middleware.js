@@ -1,5 +1,5 @@
 const jwt = require("jsonwebtoken");
-const { user_roles } = require("../models");
+const { active_sessions } = require("../models");
 
 const authenticate = async (req, res, next) => {
     const authHeader = req.headers.authorization;
@@ -9,16 +9,25 @@ const authenticate = async (req, res, next) => {
 
     const token = authHeader.split(" ")[1];
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret_key_here');
+        // Role is embedded in the token — no per-request DB call needed
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        // Fetch the user's role
-        const userRoleRecord = await user_roles.findOne({ where: { user_id: decoded.id } });
-        const role = userRoleRecord ? userRoleRecord.role : 'user';
+        // Validate token is still active (not logged out)
+        const session = await active_sessions.findOne({ where: { token } });
+        if (!session) {
+            return res.status(401).json({ error: "Session expired or logged out. Please log in again." });
+        }
+
+        // Check session expiry
+        if (new Date() > new Date(session.expires_at)) {
+            await session.destroy();
+            return res.status(401).json({ error: "Session expired. Please log in again." });
+        }
 
         req.user = {
             id: decoded.id,
             email: decoded.email,
-            role: role
+            role: decoded.role || 'user'
         };
         next();
     } catch (err) {

@@ -1,8 +1,13 @@
-const { auth_users, pending_users, active_sessions, User, user_roles } = require("../models");
+const { auth_users, pending_users, active_sessions, User, user_roles, sequelize } = require("../models");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const { logger } = require("../utils/logger");
+
+// Fail fast if JWT secret is not configured
+if (!process.env.JWT_SECRET) {
+    throw new Error("FATAL: JWT_SECRET environment variable is not set. Server cannot start.");
+}
 
 const signup = async (userData) => {
     const { email, password } = userData;
@@ -43,7 +48,12 @@ const verifyOTP = async (email, otp) => {
         throw new Error("No pending signup found for this email");
     }
 
-    if (pendingUser.otp !== otp) {
+    // Timing-safe OTP comparison to prevent timing attacks
+    const otpBuffer = Buffer.from(otp.padEnd(6));
+    const storedBuffer = Buffer.from(String(pendingUser.otp).padEnd(6));
+    const isOtpValid = otpBuffer.length === storedBuffer.length &&
+        crypto.timingSafeEqual(otpBuffer, storedBuffer);
+    if (!isOtpValid) {
         throw new Error("Invalid OTP");
     }
 
@@ -51,20 +61,23 @@ const verifyOTP = async (email, otp) => {
         throw new Error("OTP expired");
     }
 
-    const newAuthUser = await auth_users.create({
-        id: pendingUser.id,
-        email: pendingUser.email,
-        password_hash: pendingUser.password_hash,
-        created_at: new Date()
-    });
+    // Wrap in transaction to ensure atomicity
+    await sequelize.transaction(async (t) => {
+        const newAuthUser = await auth_users.create({
+            id: pendingUser.id,
+            email: pendingUser.email,
+            password_hash: pendingUser.password_hash,
+            created_at: new Date()
+        }, { transaction: t });
 
-    await User.create({
-        name: email.split('@')[0],
-        folio: email.split('@')[0] + '-FOLIO',
-        auth_user_id: newAuthUser.id,
-    });
+        await User.create({
+            name: email.split('@')[0],
+            folio: email.split('@')[0] + '-FOLIO',
+            auth_user_id: newAuthUser.id,
+        }, { transaction: t });
 
-    await pendingUser.destroy();
+        await pendingUser.destroy({ transaction: t });
+    });
 
     return { message: "Account verified successfully" };
 };
@@ -80,9 +93,14 @@ const login = async (email, password) => {
         throw new Error("Invalid credentials");
     }
 
+    // Fetch role before signing so it's embedded in the token
+    // (avoids a DB query on every authenticated request)
+    const userRoleRecord = await user_roles.findOne({ where: { user_id: authUser.id } });
+    const role = userRoleRecord ? userRoleRecord.role : 'user';
+
     const token = jwt.sign(
-        { id: authUser.id, email: authUser.email },
-        process.env.JWT_SECRET || 'secret',
+        { id: authUser.id, email: authUser.email, role },
+        process.env.JWT_SECRET,
         { expiresIn: '24h' }
     );
 
@@ -94,8 +112,6 @@ const login = async (email, password) => {
     });
 
     const user = await User.findOne({ where: { auth_user_id: authUser.id } });
-    const userRoleRecord = await user_roles.findOne({ where: { user_id: authUser.id } });
-    const role = userRoleRecord ? userRoleRecord.role : 'user';
 
     return { user, token, role };
 };
@@ -109,10 +125,12 @@ const forgotPassword = async (email) => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const resetToken = crypto.randomBytes(32).toString('hex');
 
+    // TODO: Send otp and resetToken via email (Nodemailer). Do NOT return them in the response.
     logger.info(`[AUTH] Reset OTP for ${email}: ${otp}`);
     logger.info(`[AUTH] Reset Link: http://localhost:5173/reset-password?email=${email}&token=${resetToken}`);
 
-    return { message: "Reset instructions sent", email, otp };
+    // SECURITY: otp and resetToken are intentionally NOT returned in the response
+    return { message: "Reset instructions sent to your email address" };
 };
 
 const getAllUsersWithRoles = async () => {
@@ -148,17 +166,29 @@ const updateUserRole = async (userId, newRole) => {
 };
 
 const deleteUser = async (userId) => {
-    // Delete in sequence to maintain integrity (though cascades might handle some)
-    await user_roles.destroy({ where: { user_id: userId } });
-    await active_sessions.destroy({ where: { auth_user_id: userId } });
-    await User.destroy({ where: { auth_user_id: userId } });
-    return await auth_users.destroy({ where: { id: userId } });
+    // Wrapped in a transaction for atomicity — partial deletes won't leave orphaned records
+    await sequelize.transaction(async (t) => {
+        await user_roles.destroy({ where: { user_id: userId }, transaction: t });
+        await active_sessions.destroy({ where: { auth_user_id: userId }, transaction: t });
+        await User.destroy({ where: { auth_user_id: userId }, transaction: t });
+        await auth_users.destroy({ where: { id: userId }, transaction: t });
+    });
+    return { message: "User and all associated data deleted successfully" };
+};
+
+const logout = async (token) => {
+    const destroyed = await active_sessions.destroy({ where: { token } });
+    if (!destroyed) {
+        throw new Error("Session not found or already expired");
+    }
+    return { message: "Logged out successfully" };
 };
 
 module.exports = {
     signup,
     verifyOTP,
     login,
+    logout,
     forgotPassword,
     getAllUsersWithRoles,
     updateUserRole,
