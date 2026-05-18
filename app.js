@@ -4,7 +4,7 @@ const express = require("express");
 const helmet = require("helmet");
 const cors = require("cors");
 const path = require("path");
-const rateLimiter = require("./middlewares/rateLimiter");
+const { limiter, authLimiter } = require("./middlewares/rateLimiter");
 const { requestLogger } = require("./utils/logger");
 const authRoute = require("./routes/auth.route");
 const roleRoute = require("./routes/role.route");
@@ -19,6 +19,8 @@ const derivativesRoute = require("./routes/derivatives.route");
 const userInvestmentMappingRoute = require("./routes/userInvestmentMapping.route");
 const notificationHistoryRoute = require("./routes/notificationHistory.route");
 const sidebarRoute = require("./routes/sidebar.route");
+const investorRoute = require("./routes/investor.route");
+const masterRoute = require("./routes/master.route");
 const errorHandler = require("./middlewares/errorHandler");
 
 // ─── Startup Guards ─────────────────────────────────────────────────────────
@@ -54,7 +56,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ─── Rate Limiting ────────────────────────────────────────────────────────────
-app.use(rateLimiter);
+app.use(limiter);
 
 // ─── HTTP Request Logging ─────────────────────────────────────────────────────
 app.use(requestLogger);
@@ -68,8 +70,9 @@ app.get("/", (req, res) =>
 );
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
+// Auth routes get a stricter rate limiter (10 req / 15 min) to block brute-force
+app.use("/api/auth", authLimiter, authRoute);
 app.use("/api", transactionRoute);
-app.use("/api/auth", authRoute);
 app.use("/api", roleRoute);
 app.use("/api", goldRoute);
 app.use("/api", flatRoute);
@@ -81,10 +84,12 @@ app.use("/api/derivatives", derivativesRoute);
 app.use("/api/user-mappings", userInvestmentMappingRoute);
 app.use("/api", sidebarRoute);
 app.use("/api/notifications", notificationHistoryRoute);
+app.use("/api", investorRoute);
+app.use("/api", masterRoute);
 
 // ─── 404 Handler (must be before error handler) ───────────────────────────────
 app.use((req, res) => {
-  res.status(404).json({ error: "Not Found" });
+  res.status(404).json({ status: "error", message: "Not Found" });
 });
 
 // ─── Centralized Error Handler (must be last) ─────────────────────────────────

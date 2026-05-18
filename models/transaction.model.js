@@ -15,6 +15,11 @@ module.exports = (sequelize, DataTypes) => {
     },
     {
       tableName: "transactions",
+      indexes: [
+        { fields: ["user_id"] },
+        { fields: ["scheme_id"] },
+        { fields: ["date"] }
+      ]
     }
   );
 

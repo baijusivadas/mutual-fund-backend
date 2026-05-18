@@ -7,6 +7,7 @@ const {
     deleteItem
 } = require("../controllers/advanced.controller");
 const authenticate = require("../middlewares/auth.middleware");
+const authorize = require("../middlewares/role.middleware");
 const router = express.Router();
 
 // Middleware to inject model name
@@ -15,7 +16,7 @@ const setModel = (req, res, next) => {
     next();
 };
 
-router.use(authenticate, setModel);
+router.use(authenticate, authorize(["superAdmin"]), setModel);
 
 router.get("/", getAllItems);
 router.get("/:id", getItemById);

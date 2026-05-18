@@ -13,6 +13,10 @@ module.exports = (sequelize) => {
         {
             underscored: true,
             timestamps: true,
+            indexes: [
+                { fields: ["user_id"] },
+                { fields: ["asset_type"] }
+            ]
         }
     );
 

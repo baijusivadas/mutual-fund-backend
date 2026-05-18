@@ -71,12 +71,28 @@ const processTransactionFile = async (filePath) => {
   return { count: transactions.length, transactions };
 };
 
+const { getCache, setCache } = require("../utils/cache.util");
+
 const calculateTransactionsXirr = async () => {
-  const users = await User.findAll({ include: Transaction });
+  const cacheKey = 'transactions_xirr_results';
+  const cachedData = getCache(cacheKey);
+  if (cachedData) return cachedData;
+
+  const users = await User.findAll({ 
+    include: [{
+      model: Transaction,
+      attributes: ['amount', 'date', 'type']
+    }],
+    attributes: ['id', 'name']
+  });
 
   const results = [];
   for (const user of users) {
-    // Fixed: renamed inner variable to avoid parameter shadowing
+    if (!user.Transactions || user.Transactions.length === 0) {
+      results.push({ investor_name: user.name, xirr: "N/A" });
+      continue;
+    }
+
     const flows = user.Transactions.map((t) => ({
       amount: ["redemption", "switch out"].includes(t.type.toLowerCase())
         ? Math.abs(t.amount)
@@ -92,6 +108,7 @@ const calculateTransactionsXirr = async () => {
     }
   }
 
+  setCache(cacheKey, results, 300); // Cache for 5 minutes
   return results;
 };
 
