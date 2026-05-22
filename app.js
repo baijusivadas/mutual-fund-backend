@@ -27,11 +27,23 @@ const errorHandler = require("./middlewares/errorHandler");
 if (!process.env.JWT_SECRET) {
   throw new Error("FATAL: JWT_SECRET environment variable is not set.");
 }
+if (process.env.JWT_SECRET.length < 32) {
+  console.warn('WARNING: JWT_SECRET is shorter than 32 characters; consider using a stronger secret.');
+}
 
 const app = express();
 
 // ─── Security Headers ────────────────────────────────────────────────────────
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:"]
+    }
+  }
+}));
 
 // ─── CORS — allowlist from environment ───────────────────────────────────────
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "http://localhost:5173")
@@ -98,8 +110,27 @@ app.use((req, res) => {
 // ─── Centralized Error Handler (must be last) ─────────────────────────────────
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 3000;
+const defaultPort = 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : defaultPort;
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`✅ Server running on http://localhost:${PORT}`);
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    const fallbackPort = process.env.PORT_FALLBACK ? parseInt(process.env.PORT_FALLBACK) : 0;
+    if (fallbackPort) {
+      server.close();
+      app.listen(fallbackPort, () => {
+        console.log(`⚠️ Port ${PORT} in use. Fallback to port ${fallbackPort}`);
+      });
+    } else {
+      console.error(`❌ Port ${PORT} already in use and no fallback provided.`);
+      process.exit(1);
+    }
+  } else {
+    console.error('Server error:', err);
+    process.exit(1);
+  }
 });
