@@ -3,6 +3,7 @@ const {
     forgotUserPassword,
     getUsers,
     updateUserRole,
+    updateUserProfile,
     deleteUser,
     signupUser,
     verifyUserOTP,
@@ -31,6 +32,7 @@ router.post("/forgot-password", validate(forgotPasswordSchema), forgotUserPasswo
 // Admin routes
 router.get("/users", authenticate, authorize(["superAdmin"]), getUsers);
 router.patch("/users/:userId/role", authenticate, authorize(["superAdmin"]), validate(updateRoleSchema), updateUserRole);
+router.patch("/users/:userId/profile", authenticate, authorize(["superAdmin"]), updateUserProfile);
 router.delete("/users/:userId", authenticate, authorize(["superAdmin"]), deleteUser);
 
 module.exports = router;

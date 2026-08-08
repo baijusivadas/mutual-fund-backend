@@ -59,6 +59,14 @@ const logoutUser = async (req, res) => {
   sendSuccess(res, result, 'Logged out successfully');
 };
 
+const updateUserProfile = async (req, res) => {
+  const { userId } = req.params;
+  const { full_name } = req.body;
+  const result = await authService.updateUserProfile(userId, { full_name });
+  logger.info(`User profile updated: ${userId}`);
+  sendSuccess(res, result, 'Profile updated successfully');
+};
+
 module.exports = {
   signupUser,
   verifyUserOTP,
@@ -67,6 +75,7 @@ module.exports = {
   forgotUserPassword,
   getUsers,
   updateUserRole,
+  updateUserProfile,
   deleteUser,
 };
 

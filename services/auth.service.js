@@ -184,6 +184,15 @@ const logout = async (token) => {
     return { message: "Logged out successfully" };
 };
 
+const updateUserProfile = async (userId, { full_name }) => {
+    const user = await User.findOne({ where: { auth_user_id: userId } });
+    if (!user) {
+        throw new Error("User not found");
+    }
+    await user.update({ name: full_name });
+    return { message: "Profile updated successfully" };
+};
+
 module.exports = {
     signup,
     verifyOTP,
@@ -192,5 +201,6 @@ module.exports = {
     forgotPassword,
     getAllUsersWithRoles,
     updateUserRole,
+    updateUserProfile,
     deleteUser
 };

@@ -2,73 +2,80 @@ const { xirr } = require("xirr");
 const xlsx = require("xlsx");
 const { User, Scheme, Transaction } = require("../models");
 
-const processTransactionFile = async (filePath) => {
+const processTransactionFile = async (filePath, selectedUsers = [], createdBy = null) => {
   const workbook = xlsx.readFile(filePath);
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   const data = xlsx.utils.sheet_to_json(sheet);
 
-  // ─── Pre-build caches to avoid N+1 DB calls inside the loop ─────────────────
-  // Process all unique users and schemes upfront in batch
-  const uniqueUsers = new Map();
-  const uniqueSchemes = new Map();
+  const purchasesData = [];
+  const redemptionsData = [];
+  const uniqueInvestors = new Set();
 
   for (const row of data) {
     const investorName = row["Investor Name"]?.trim();
     const schemeName = row["Scheme Name"]?.trim();
     const folio = row["Folio No"]?.trim();
-    if (investorName && folio) uniqueUsers.set(`${investorName}|${folio}`, { name: investorName, folio });
-    if (schemeName) uniqueSchemes.set(schemeName, { name: schemeName });
-  }
 
-  // Bulk findOrCreate for users (sequential but only unique entries)
-  const userCache = new Map();
-  for (const [key, userData] of uniqueUsers) {
-    const [user] = await User.findOrCreate({
-      where: { name: userData.name, folio: userData.folio },
-      defaults: userData,
-    });
-    userCache.set(key, user);
-  }
+    if (!investorName || !schemeName || !folio) continue;
+    uniqueInvestors.add(investorName);
 
-  // Bulk findOrCreate for schemes (sequential but only unique entries)
-  const schemeCache = new Map();
-  for (const [name, schemeData] of uniqueSchemes) {
-    const [scheme] = await Scheme.findOrCreate({
-      where: { name },
-      defaults: schemeData,
-    });
-    schemeCache.set(name, scheme);
-  }
+    let type = row["Transaction Type"] || "";
+    let isRedemption = type.toLowerCase().includes("redemption") || type.toLowerCase().includes("switch out");
+    const units = parseFloat(row["Units"]);
+    const nav = parseFloat(row["NAV"]);
+    const amount = parseFloat(row["Amount"]);
 
-  // ─── Build transactions using cache — zero extra DB calls ────────────────────
-  const transactions = [];
-  for (const row of data) {
-    const investorName = row["Investor Name"]?.trim();
-    const schemeName = row["Scheme Name"]?.trim();
-    const folio = row["Folio No"]?.trim();
+    if (units < 0) isRedemption = true; // some excel sheets show redemptions as negative units
 
-    const user = userCache.get(`${investorName}|${folio}`);
-    const scheme = schemeCache.get(schemeName);
-    if (!user || !scheme) continue;
-
-    let type = row["Transaction Type"];
-    if (type?.toLowerCase().includes("switch out")) {
-      type = "Redemption";
-    }
-
-    transactions.push({
+    const record = {
+      id: require('crypto').randomUUID(),
       date: new Date(row["Date"]),
-      type,
-      units: parseFloat(row["Units"]),
-      nav: parseFloat(row["NAV"]),
-      amount: parseFloat(row["Amount"]),
-      user_id: user.id,
-      scheme_id: scheme.id,
-    });
+      scheme: schemeName,
+      units: Math.abs(units),
+      nav,
+      amount: Math.abs(amount),
+      folio,
+      investor_name: investorName,
+      transaction_type: type,
+      created_at: new Date()
+    };
+
+    if (isRedemption) {
+      redemptionsData.push(record);
+    } else {
+      purchasesData.push(record);
+    }
   }
 
-  await Transaction.bulkCreate(transactions);
-  return { count: transactions.length, transactions };
+  // Insert into DB
+  if (purchasesData.length > 0) {
+    await db.purchases.bulkCreate(purchasesData, { ignoreDuplicates: true });
+  }
+  if (redemptionsData.length > 0) {
+    await db.redemptions.bulkCreate(redemptionsData, { ignoreDuplicates: true });
+  }
+
+  // Map users to investments
+  if (selectedUsers && selectedUsers.length > 0) {
+    const mappings = [];
+    for (const userId of selectedUsers) {
+      for (const investor of uniqueInvestors) {
+        mappings.push({
+          user_id: userId,
+          asset_type: "mutual_funds",
+          investor_name: investor,
+          created_by: createdBy
+        });
+      }
+    }
+    if (mappings.length > 0) {
+      await db.user_investment_mappings.bulkCreate(mappings, { 
+        ignoreDuplicates: true 
+      });
+    }
+  }
+
+  return { count: purchasesData.length + redemptionsData.length };
 };
 
 const { getCache, setCache } = require("../utils/cache.util");

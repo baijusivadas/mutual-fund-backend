@@ -9,13 +9,9 @@ const {
 const authenticate = require("../middlewares/auth.middleware");
 const router = express.Router();
 
-// Middleware to inject model name
-const setModel = (req, res, next) => {
-    req.params.model = "derivatives";
-    next();
-};
+const injectModel = require("../middlewares/injectModel");
 
-router.use(authenticate, setModel);
+router.use(authenticate, injectModel("derivatives"));
 
 router.get("/", getAllItems);
 router.get("/:id", getItemById);

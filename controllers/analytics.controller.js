@@ -1,4 +1,5 @@
 const AnalyticsService = require("../services/analytics.service");
+const { scheme_summary } = require("../models");
 const { createControllerLogger } = require("../utils/logger");
 const logger = createControllerLogger("analyticsController");
 
@@ -17,6 +18,17 @@ const getPortfolioMetrics = async (req, res, next) => {
     }
 };
 
+const getSchemeSummary = async (req, res, next) => {
+    try {
+        const summaries = await scheme_summary.findAll();
+        res.json(summaries);
+    } catch (err) {
+        logger.error(`Get scheme summary error: ${err.message}`);
+        next(err);
+    }
+};
+
 module.exports = {
     getPortfolioMetrics,
+    getSchemeSummary,
 };

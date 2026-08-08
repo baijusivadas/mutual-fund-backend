@@ -45,9 +45,54 @@ const deleteRole = async (req, res, next) => {
     }
 };
 
+const db = require("../models");
+
+const getSidebarItemsAdmin = async (req, res, next) => {
+    try {
+        const items = await db.sidebar_items.findAll({ order: [['display_order', 'ASC']] });
+        res.json(items);
+    } catch (err) {
+        logger.error(`Get sidebar items admin error: ${err.message}`);
+        next(err);
+    }
+};
+
+const getRoleSidebarItems = async (req, res, next) => {
+    try {
+        const items = await db.role_sidebar_items.findAll();
+        res.json(items);
+    } catch (err) {
+        logger.error(`Get role sidebar items error: ${err.message}`);
+        next(err);
+    }
+};
+
+const updateRoleSidebarItems = async (req, res, next) => {
+    try {
+        const { roleId, sidebarItemIds } = req.body;
+        
+        await db.role_sidebar_items.destroy({ where: { role_id: roleId } });
+        
+        if (sidebarItemIds && sidebarItemIds.length > 0) {
+            const insertData = sidebarItemIds.map(sid => ({
+                role_id: roleId,
+                sidebar_item_id: sid,
+            }));
+            await db.role_sidebar_items.bulkCreate(insertData);
+        }
+        res.json({ message: "Permissions updated successfully" });
+    } catch (err) {
+        logger.error(`Update role sidebar items error: ${err.message}`);
+        next(err);
+    }
+};
+
 module.exports = {
     createRole,
     getAllRoles,
     updateRole,
-    deleteRole
+    deleteRole,
+    getSidebarItemsAdmin,
+    getRoleSidebarItems,
+    updateRoleSidebarItems
 };

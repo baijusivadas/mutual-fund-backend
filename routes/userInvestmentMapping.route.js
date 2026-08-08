@@ -10,13 +10,9 @@ const authenticate = require("../middlewares/auth.middleware");
 const authorize = require("../middlewares/role.middleware");
 const router = express.Router();
 
-// Middleware to inject model name
-const setModel = (req, res, next) => {
-    req.params.model = "user_investment_mappings";
-    next();
-};
+const injectModel = require("../middlewares/injectModel");
 
-router.use(authenticate, authorize(["superAdmin"]), setModel);
+router.use(authenticate, authorize(["superAdmin"]), injectModel("user_investment_mappings"));
 
 router.get("/", getAllItems);
 router.get("/:id", getItemById);

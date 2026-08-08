@@ -13,7 +13,16 @@ const uploadTransactionFile = async (req, res, next) => {
       return res.status(400).json({ error: "No file uploaded" });
     }
 
-    const result = await processTransactionFile(req.file.path);
+    let selectedUsers = [];
+    if (req.body.selectedUsers) {
+      try {
+        selectedUsers = JSON.parse(req.body.selectedUsers);
+      } catch (e) {
+        selectedUsers = req.body.selectedUsers.split(',');
+      }
+    }
+
+    const result = await processTransactionFile(req.file.path, selectedUsers, req.user?.id);
     logger.info(`Excel file processed successfully: ${result.count} records`);
 
     res.json({
