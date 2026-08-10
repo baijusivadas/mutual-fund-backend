@@ -19,14 +19,20 @@ const ALLOWED_ENTITIES = [
 const getModel = (entityName, userRole) => {
     if (userRole === 'superAdmin') {
         if (!db[entityName]) {
-            throw new Error(`Entity ${entityName} does not exist in database`);
+            throw new Error(`Entity '${entityName}' does not exist in the database`);
         }
         return db[entityName];
     }
 
     if (!ALLOWED_ENTITIES.includes(entityName)) {
-        throw new Error(`Entity ${entityName} is not allowed`);
+        throw new Error(`Entity '${entityName}' is not allowed`);
     }
+
+    // Guard: entity is whitelisted but may still be missing from db (e.g. renamed model)
+    if (!db[entityName]) {
+        throw new Error(`Entity '${entityName}' is not available`);
+    }
+
     return db[entityName];
 };
 

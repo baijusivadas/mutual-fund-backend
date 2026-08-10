@@ -1,7 +1,15 @@
 const { xirr } = require("xirr");
 const xlsx = require("xlsx");
-const { User, Scheme, Transaction } = require("../models");
+const crypto = require("crypto");
+const db = require("../models");
+const { getCache, setCache } = require("../utils/cache.util");
 
+/**
+ * Process an uploaded Excel/CSV transaction file and persist records to DB.
+ * @param {string} filePath - Path to the uploaded file on disk
+ * @param {string[]} selectedUsers - Optional list of user IDs to map investors to
+ * @param {string|null} createdBy - ID of the admin who triggered the upload
+ */
 const processTransactionFile = async (filePath, selectedUsers = [], createdBy = null) => {
   const workbook = xlsx.readFile(filePath);
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -20,15 +28,18 @@ const processTransactionFile = async (filePath, selectedUsers = [], createdBy = 
     uniqueInvestors.add(investorName);
 
     let type = row["Transaction Type"] || "";
-    let isRedemption = type.toLowerCase().includes("redemption") || type.toLowerCase().includes("switch out");
+    let isRedemption =
+      type.toLowerCase().includes("redemption") ||
+      type.toLowerCase().includes("switch out");
     const units = parseFloat(row["Units"]);
     const nav = parseFloat(row["NAV"]);
     const amount = parseFloat(row["Amount"]);
 
-    if (units < 0) isRedemption = true; // some excel sheets show redemptions as negative units
+    // Some Excel sheets represent redemptions as negative units
+    if (units < 0) isRedemption = true;
 
     const record = {
-      id: require('crypto').randomUUID(),
+      id: crypto.randomUUID(),
       date: new Date(row["Date"]),
       scheme: schemeName,
       units: Math.abs(units),
@@ -37,7 +48,7 @@ const processTransactionFile = async (filePath, selectedUsers = [], createdBy = 
       folio,
       investor_name: investorName,
       transaction_type: type,
-      created_at: new Date()
+      created_at: new Date(),
     };
 
     if (isRedemption) {
@@ -47,7 +58,7 @@ const processTransactionFile = async (filePath, selectedUsers = [], createdBy = 
     }
   }
 
-  // Insert into DB
+  // ── Persist to DB ──────────────────────────────────────────────────────────
   if (purchasesData.length > 0) {
     await db.purchases.bulkCreate(purchasesData, { ignoreDuplicates: true });
   }
@@ -55,7 +66,7 @@ const processTransactionFile = async (filePath, selectedUsers = [], createdBy = 
     await db.redemptions.bulkCreate(redemptionsData, { ignoreDuplicates: true });
   }
 
-  // Map users to investments
+  // ── Map investors to selected users ───────────────────────────────────────
   if (selectedUsers && selectedUsers.length > 0) {
     const mappings = [];
     for (const userId of selectedUsers) {
@@ -64,48 +75,76 @@ const processTransactionFile = async (filePath, selectedUsers = [], createdBy = 
           user_id: userId,
           asset_type: "mutual_funds",
           investor_name: investor,
-          created_by: createdBy
+          created_by: createdBy,
         });
       }
     }
     if (mappings.length > 0) {
-      await db.user_investment_mappings.bulkCreate(mappings, { 
-        ignoreDuplicates: true 
+      await db.user_investment_mappings.bulkCreate(mappings, {
+        ignoreDuplicates: true,
       });
     }
   }
 
-  return { count: purchasesData.length + redemptionsData.length };
+  // Invalidate XIRR cache so next fetch reflects new data
+  const { delCache } = require("../utils/cache.util");
+  delCache("transactions_xirr_results");
+
+  return {
+    count: purchasesData.length + redemptionsData.length,
+    transactions: [...purchasesData, ...redemptionsData],
+  };
 };
 
-const { getCache, setCache } = require("../utils/cache.util");
-
+/**
+ * Calculate XIRR for all users. Results are cached for 5 minutes.
+ */
 const calculateTransactionsXirr = async () => {
-  const cacheKey = 'transactions_xirr_results';
+  const cacheKey = "transactions_xirr_results";
   const cachedData = getCache(cacheKey);
   if (cachedData) return cachedData;
 
-  const users = await User.findAll({ 
-    include: [{
-      model: Transaction,
-      attributes: ['amount', 'date', 'type']
-    }],
-    attributes: ['id', 'name']
+  const users = await db.User.findAll({
+    attributes: ["id", "name"],
   });
 
   const results = [];
+
   for (const user of users) {
-    if (!user.Transactions || user.Transactions.length === 0) {
+    // Fetch all purchases and redemptions for this user via investor mapping
+    const mappings = await db.user_investment_mappings.findAll({
+      where: { user_id: user.id, asset_type: "mutual_funds" },
+    });
+
+    const investorNames = mappings
+      .map((m) => m.investor_name)
+      .filter(Boolean);
+
+    if (investorNames.length === 0) {
       results.push({ investor_name: user.name, xirr: "N/A" });
       continue;
     }
 
-    const flows = user.Transactions.map((t) => ({
-      amount: ["redemption", "switch out"].includes(t.type.toLowerCase())
-        ? Math.abs(t.amount)
-        : -Math.abs(t.amount),
-      when: new Date(t.date),
-    }));
+    const [purchases, redemptions] = await Promise.all([
+      db.purchases.findAll({ where: { investor_name: investorNames } }),
+      db.redemptions.findAll({ where: { investor_name: investorNames } }),
+    ]);
+
+    if (purchases.length === 0 && redemptions.length === 0) {
+      results.push({ investor_name: user.name, xirr: "N/A" });
+      continue;
+    }
+
+    const flows = [
+      ...purchases.map((p) => ({
+        amount: -Math.abs(Number(p.amount)), // cash out (investment)
+        when: new Date(p.date),
+      })),
+      ...redemptions.map((r) => ({
+        amount: Math.abs(Number(r.amount)), // cash in (return)
+        when: new Date(r.date),
+      })),
+    ];
 
     try {
       const rate = xirr(flows) * 100;

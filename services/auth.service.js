@@ -118,14 +118,19 @@ const login = async (email, password) => {
 
 const forgotPassword = async (email) => {
     const user = await auth_users.findOne({ where: { email } });
+
+    // SECURITY: Always return the same message regardless of whether the email exists.
+    // This prevents user enumeration — an attacker cannot probe which emails are registered.
     if (!user) {
-        throw new Error("User not found");
+        logger.warn(`[AUTH] Forgot password requested for non-existent email: ${email}`);
+        return { message: "Reset instructions sent to your email address" };
     }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const resetToken = crypto.randomBytes(32).toString('hex');
 
-    // TODO: Send otp and resetToken via email (Nodemailer). Do NOT return them in the response.
+    // TODO: Persist resetToken to DB (e.g. auth_users.reset_token + reset_token_expires_at)
+    // TODO: Send OTP and resetToken via email (Nodemailer). Do NOT return them in the response.
     logger.info(`[AUTH] Reset OTP for ${email}: ${otp}`);
     logger.info(`[AUTH] Reset Link: http://localhost:5173/reset-password?email=${email}&token=${resetToken}`);
 
