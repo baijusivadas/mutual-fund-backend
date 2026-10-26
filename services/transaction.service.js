@@ -1,8 +1,8 @@
 const { xirr } = require('xirr');
-const xlsx = require('xlsx');
 const crypto = require('crypto');
 const db = require('../models');
 const { getCache, setCache } = require('../utils/cache.util');
+const { parseTransactionWorkbook } = require('../utils/transactionFileParser');
 
 /**
  * Process an uploaded Excel/CSV transaction file and persist records to DB.
@@ -11,50 +11,39 @@ const { getCache, setCache } = require('../utils/cache.util');
  * @param {string|null} createdBy - ID of the admin who triggered the upload
  */
 const processTransactionFile = async (filePath, selectedUsers = [], createdBy = null) => {
-  const workbook = xlsx.readFile(filePath);
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const data = xlsx.utils.sheet_to_json(sheet);
-
+  const { transactions: parsedTransactions, skipped } = parseTransactionWorkbook(filePath);
   const purchasesData = [];
   const redemptionsData = [];
   const uniqueInvestors = new Set();
 
-  for (const row of data) {
-    const investorName = row['Investor Name']?.trim();
-    const schemeName = row['Scheme Name']?.trim();
-    const folio = row['Folio No']?.trim();
-
-    if (!investorName || !schemeName || !folio) continue;
-    uniqueInvestors.add(investorName);
-
-    let type = row['Transaction Type'] || '';
-    let isRedemption =
-      type.toLowerCase().includes('redemption') || type.toLowerCase().includes('switch out');
-    const units = parseFloat(row['Units']);
-    const nav = parseFloat(row['NAV']);
-    const amount = parseFloat(row['Amount']);
-
-    // Some Excel sheets represent redemptions as negative units
-    if (units < 0) isRedemption = true;
-
+  for (const transaction of parsedTransactions) {
     const record = {
       id: crypto.randomUUID(),
-      date: new Date(row['Date']),
-      scheme: schemeName,
-      units: Math.abs(units),
-      nav,
-      amount: Math.abs(amount),
-      folio,
-      investor_name: investorName,
-      transaction_type: type,
+      date: transaction.date,
+      scheme: transaction.scheme,
+      units: transaction.units,
+      nav: transaction.nav,
+      amount: transaction.amount,
+      folio: transaction.folio,
+      investor_name: transaction.investor_name,
+      transaction_type: transaction.transaction_type,
       created_at: new Date(),
     };
+    uniqueInvestors.add(transaction.investor_name);
 
-    if (isRedemption) {
+    if (transaction.isRedemption) {
       redemptionsData.push(record);
     } else {
       purchasesData.push(record);
     }
+  }
+
+  if (parsedTransactions.length === 0) {
+    const error = new Error(
+      `No valid transaction rows found. ${skipped} row(s) were skipped; check the required columns and values.`
+    );
+    error.status = 400;
+    throw error;
   }
 
   // ── Persist to DB ──────────────────────────────────────────────────────────
@@ -65,10 +54,17 @@ const processTransactionFile = async (filePath, selectedUsers = [], createdBy = 
     await db.redemptions.bulkCreate(redemptionsData, { ignoreDuplicates: true });
   }
 
-  // ── Map investors to selected users ───────────────────────────────────────
-  if (selectedUsers && selectedUsers.length > 0) {
+  // ── Map investors to selected users (or default to uploader) ──────────────
+  const targetUsers =
+    selectedUsers && selectedUsers.length > 0
+      ? selectedUsers
+      : createdBy
+      ? [createdBy]
+      : [];
+
+  if (targetUsers.length > 0) {
     const mappings = [];
-    for (const userId of selectedUsers) {
+    for (const userId of targetUsers) {
       for (const investor of uniqueInvestors) {
         mappings.push({
           user_id: userId,
@@ -91,6 +87,10 @@ const processTransactionFile = async (filePath, selectedUsers = [], createdBy = 
 
   return {
     count: purchasesData.length + redemptionsData.length,
+    purchases: purchasesData.length,
+    redemptions: redemptionsData.length,
+    skipped,
+    mappedUsers: selectedUsers.length,
     transactions: [...purchasesData, ...redemptionsData],
   };
 };

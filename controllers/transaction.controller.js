@@ -28,6 +28,10 @@ const uploadTransactionFile = async (req, res, next) => {
     res.json({
       message: 'File processed and data stored in database',
       count: result.count,
+      purchases: result.purchases,
+      redemptions: result.redemptions,
+      skipped: result.skipped,
+      mappedUsers: result.mappedUsers,
       data: result.transactions,
     });
   } catch (err) {
