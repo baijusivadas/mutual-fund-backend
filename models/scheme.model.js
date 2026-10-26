@@ -1,6 +1,6 @@
 module.exports = (sequelize, DataTypes) => {
   const Scheme = sequelize.define(
-    "Scheme",
+    'Scheme',
     {
       id: {
         type: DataTypes.UUID,
@@ -10,8 +10,8 @@ module.exports = (sequelize, DataTypes) => {
       name: { type: DataTypes.STRING, allowNull: false },
     },
     {
-      tableName: "schemes",
-      indexes: [{ unique: true, fields: ["name"] }],
+      tableName: 'schemes',
+      indexes: [{ unique: true, fields: ['name'] }],
     }
   );
 

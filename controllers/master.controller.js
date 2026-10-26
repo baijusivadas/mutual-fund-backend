@@ -1,6 +1,6 @@
-const masterService = require("../services/master.service");
-const { createControllerLogger } = require("../utils/logger");
-const logger = createControllerLogger("masterController");
+const masterService = require('../services/master.service');
+const { createControllerLogger } = require('../utils/logger');
+const logger = createControllerLogger('masterController');
 
 // --- Mutual Funds ---
 
@@ -78,5 +78,5 @@ module.exports = {
   getMutualFunds,
   addNav,
   createStockExchange,
-  getStocks
+  getStocks,
 };

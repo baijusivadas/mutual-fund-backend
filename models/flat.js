@@ -1,6 +1,6 @@
 module.exports = (sequelize, DataTypes) => {
   const flat = sequelize.define(
-    "flats",
+    'flats',
     {
       id: { type: DataTypes.UUID, primaryKey: true },
       flat_name: DataTypes.TEXT,

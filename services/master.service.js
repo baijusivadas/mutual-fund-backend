@@ -1,9 +1,13 @@
-const { 
-  FundHouse, MutualFund, NavHistory, 
-  StockExchange, StockSector, Stock, StockPrice, 
-  sequelize 
-} = require("../models");
-const crypto = require("crypto");
+const {
+  FundHouse,
+  MutualFund,
+  NavHistory,
+  StockExchange,
+  StockSector,
+  Stock,
+  StockPrice,
+} = require('../models');
+const crypto = require('crypto');
 
 // --- Mutual Funds ---
 
@@ -22,7 +26,7 @@ const createMutualFund = async (data) => {
 const getMutualFunds = async (filters = {}) => {
   return await MutualFund.findAll({
     where: filters,
-    include: [FundHouse]
+    include: [FundHouse],
   });
 };
 
@@ -30,14 +34,14 @@ const addNavHistory = async (fundId, navData) => {
   return await NavHistory.create({
     ...navData,
     mutual_fund_id: fundId,
-    id: crypto.randomUUID()
+    id: crypto.randomUUID(),
   });
 };
 
 const getNavHistory = async (fundId) => {
   return await NavHistory.findAll({
     where: { mutual_fund_id: fundId },
-    order: [['nav_date', 'DESC']]
+    order: [['nav_date', 'DESC']],
   });
 };
 
@@ -58,7 +62,7 @@ const createStock = async (data) => {
 const getStocks = async (filters = {}) => {
   return await Stock.findAll({
     where: filters,
-    include: [StockSector]
+    include: [StockSector],
   });
 };
 
@@ -66,7 +70,7 @@ const addStockPrice = async (stockId, priceData) => {
   return await StockPrice.create({
     ...priceData,
     stock_id: stockId,
-    id: crypto.randomUUID()
+    id: crypto.randomUUID(),
   });
 };
 
@@ -81,5 +85,5 @@ module.exports = {
   getStockExchanges,
   createStock,
   getStocks,
-  addStockPrice
+  addStockPrice,
 };

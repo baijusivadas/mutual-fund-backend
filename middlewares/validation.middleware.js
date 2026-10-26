@@ -1,9 +1,7 @@
-const { sendError } = require("../utils/responseHelper");
-
 /**
  * Generic validation middleware using Zod
- * @param {import('zod').ZodSchema} schema 
- * @param {'body' | 'query' | 'params'} property 
+ * @param {import('zod').ZodSchema} schema
+ * @param {'body' | 'query' | 'params'} property
  */
 const validate = (schema, property = 'body') => {
   return (req, res, next) => {

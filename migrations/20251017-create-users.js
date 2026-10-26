@@ -6,36 +6,36 @@ module.exports = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.literal('gen_random_uuid()'),
-        primaryKey: true
+        primaryKey: true,
       },
       name: {
         type: Sequelize.STRING,
-        allowNull: false
+        allowNull: false,
       },
       folio: {
         type: Sequelize.STRING,
-        allowNull: false
+        allowNull: false,
       },
       createdAt: {
         type: Sequelize.DATE,
         allowNull: false,
-        defaultValue: Sequelize.fn('now')
+        defaultValue: Sequelize.fn('now'),
       },
       updatedAt: {
         type: Sequelize.DATE,
         allowNull: false,
-        defaultValue: Sequelize.fn('now')
-      }
+        defaultValue: Sequelize.fn('now'),
+      },
     });
 
     await queryInterface.addConstraint('users', {
       fields: ['name', 'folio'],
       type: 'unique',
-      name: 'unique_user_folio'
+      name: 'unique_user_folio',
     });
   },
 
   async down(queryInterface) {
     await queryInterface.dropTable('users');
-  }
+  },
 };

@@ -1,4 +1,4 @@
-"use strict";
+'use strict';
 
 module.exports = {
   async up(queryInterface, Sequelize) {
@@ -6,7 +6,7 @@ module.exports = {
       id: {
         type: Sequelize.UUID,
         primaryKey: true,
-        defaultValue: Sequelize.literal('gen_random_uuid()')
+        defaultValue: Sequelize.literal('gen_random_uuid()'),
       },
       scheme_name: { type: Sequelize.TEXT, unique: true },
       total_purchased: { type: Sequelize.DECIMAL, defaultValue: 0 },
@@ -16,12 +16,12 @@ module.exports = {
       net_value: { type: Sequelize.DECIMAL, defaultValue: 0 },
       latest_nav: Sequelize.DECIMAL,
       total_investors: { type: Sequelize.INTEGER, defaultValue: 0 },
-      updated_at: { type: Sequelize.DATE, defaultValue: Sequelize.fn('now') }
+      updated_at: { type: Sequelize.DATE, defaultValue: Sequelize.fn('now') },
     });
 
-    await queryInterface.addIndex("scheme_summary", ["scheme_name"]);
+    await queryInterface.addIndex('scheme_summary', ['scheme_name']);
   },
   async down(queryInterface) {
-    await queryInterface.dropTable("scheme_summary");
-  }
+    await queryInterface.dropTable('scheme_summary');
+  },
 };

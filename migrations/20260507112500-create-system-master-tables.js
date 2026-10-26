@@ -7,28 +7,28 @@ module.exports = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
-        primaryKey: true
+        primaryKey: true,
       },
       name: {
         type: Sequelize.STRING,
         allowNull: false,
-        unique: true
+        unique: true,
       },
       iso_code: {
         type: Sequelize.STRING(10),
         allowNull: false,
-        unique: true
+        unique: true,
       },
       created_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('now')
+        defaultValue: Sequelize.fn('now'),
       },
       updated_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('now')
-      }
+        defaultValue: Sequelize.fn('now'),
+      },
     });
 
     // States
@@ -36,35 +36,35 @@ module.exports = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
-        primaryKey: true
+        primaryKey: true,
       },
       country_id: {
         type: Sequelize.UUID,
         references: {
           model: 'countries',
-          key: 'id'
+          key: 'id',
         },
         onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
+        onDelete: 'CASCADE',
       },
       name: {
         type: Sequelize.STRING,
-        allowNull: false
+        allowNull: false,
       },
       state_code: {
         type: Sequelize.STRING(10),
-        allowNull: false
+        allowNull: false,
       },
       created_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('now')
+        defaultValue: Sequelize.fn('now'),
       },
       updated_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('now')
-      }
+        defaultValue: Sequelize.fn('now'),
+      },
     });
 
     // Currencies
@@ -72,36 +72,36 @@ module.exports = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
-        primaryKey: true
+        primaryKey: true,
       },
       code: {
         type: Sequelize.STRING(10),
         allowNull: false,
-        unique: true
+        unique: true,
       },
       symbol: {
-        type: Sequelize.STRING(10)
+        type: Sequelize.STRING(10),
       },
       name: {
         type: Sequelize.STRING,
-        allowNull: false
+        allowNull: false,
       },
       created_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('now')
+        defaultValue: Sequelize.fn('now'),
       },
       updated_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('now')
-      }
+        defaultValue: Sequelize.fn('now'),
+      },
     });
   },
 
-  down: async (queryInterface, Sequelize) => {
+  down: async (queryInterface, _Sequelize) => {
     await queryInterface.dropTable('currencies');
     await queryInterface.dropTable('states');
     await queryInterface.dropTable('countries');
-  }
+  },
 };

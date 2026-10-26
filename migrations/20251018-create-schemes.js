@@ -6,27 +6,27 @@ module.exports = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.literal('gen_random_uuid()'),
-        primaryKey: true
+        primaryKey: true,
       },
       name: {
         type: Sequelize.STRING,
         allowNull: false,
-        unique: true
+        unique: true,
       },
       createdAt: {
         type: Sequelize.DATE,
         allowNull: false,
-        defaultValue: Sequelize.fn('now')
+        defaultValue: Sequelize.fn('now'),
       },
       updatedAt: {
         type: Sequelize.DATE,
         allowNull: false,
-        defaultValue: Sequelize.fn('now')
-      }
+        defaultValue: Sequelize.fn('now'),
+      },
     });
   },
 
   async down(queryInterface) {
     await queryInterface.dropTable('schemes');
-  }
+  },
 };

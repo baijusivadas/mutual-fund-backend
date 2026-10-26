@@ -1,6 +1,6 @@
 module.exports = (sequelize, DataTypes) => {
   const authToken = sequelize.define(
-    "auth_tokens",
+    'auth_tokens',
     {
       id: { type: DataTypes.UUID, primaryKey: true },
       user_id: DataTypes.UUID,

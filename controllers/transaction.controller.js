@@ -1,16 +1,16 @@
-const fs = require("fs");
+const fs = require('fs');
 const {
   processTransactionFile,
   calculateTransactionsXirr,
-} = require("../services/transaction.service");
-const { createControllerLogger } = require("../utils/logger");
-const logger = createControllerLogger("transactionController");
+} = require('../services/transaction.service');
+const { createControllerLogger } = require('../utils/logger');
+const logger = createControllerLogger('transactionController');
 
 // Upload + Process Excel
 const uploadTransactionFile = async (req, res, next) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ error: "No file uploaded" });
+      return res.status(400).json({ error: 'No file uploaded' });
     }
 
     let selectedUsers = [];
@@ -26,7 +26,7 @@ const uploadTransactionFile = async (req, res, next) => {
     logger.info(`Excel file processed successfully: ${result.count} records`);
 
     res.json({
-      message: "File processed and data stored in database",
+      message: 'File processed and data stored in database',
       count: result.count,
       data: result.transactions,
     });
@@ -47,7 +47,7 @@ const uploadTransactionFile = async (req, res, next) => {
 const fetchTransactionData = async (req, res, next) => {
   try {
     const data = await calculateTransactionsXirr();
-    logger.info("Fetched XIRR data successfully");
+    logger.info('Fetched XIRR data successfully');
     res.json(data);
   } catch (err) {
     logger.error(`Get transaction data error: ${err.message}`);

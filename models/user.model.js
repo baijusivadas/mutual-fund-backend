@@ -1,30 +1,30 @@
 module.exports = (sequelize, DataTypes) => {
   const User = sequelize.define(
-    "User",
+    'User',
     {
       id: {
         type: DataTypes.UUID,
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      name: { type: DataTypes.STRING, allowNull: false, },
+      name: { type: DataTypes.STRING, allowNull: false },
       folio: DataTypes.STRING,
       auth_user_id: {
         type: DataTypes.UUID,
         references: {
-          model: "auth_users",
-          key: "id",
+          model: 'auth_users',
+          key: 'id',
         },
       },
     },
     {
-      tableName: "users",
-      indexes: [{ unique: true, fields: ["name", "folio"] }],
+      tableName: 'users',
+      indexes: [{ unique: true, fields: ['name', 'folio'] }],
     }
   );
 
   User.associate = (models) => {
-    User.belongsTo(models.auth_users, { foreignKey: "auth_user_id" });
+    User.belongsTo(models.auth_users, { foreignKey: 'auth_user_id' });
   };
 
   return User;

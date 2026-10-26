@@ -28,4 +28,4 @@ const authLimiter = rateLimit({
   },
 });
 
-module.exports = { limiter, authLimiter };
+module.exports = { limiter, authLimiter };

@@ -1,6 +1,6 @@
 module.exports = (sequelize, DataTypes) => {
   const rawTransaction = sequelize.define(
-    "raw_transactions",
+    'raw_transactions',
     {
       id: { type: DataTypes.UUID, primaryKey: true },
       date: DataTypes.DATEONLY,

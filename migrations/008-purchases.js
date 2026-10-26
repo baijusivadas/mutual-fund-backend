@@ -1,12 +1,12 @@
-"use strict";
+'use strict';
 
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable("purchases", {
+    await queryInterface.createTable('purchases', {
       id: {
         type: Sequelize.UUID,
         primaryKey: true,
-        defaultValue: Sequelize.literal("gen_random_uuid()"),
+        defaultValue: Sequelize.literal('gen_random_uuid()'),
       },
       date: { type: Sequelize.DATEONLY, allowNull: false },
       scheme: { type: Sequelize.TEXT, allowNull: false },
@@ -16,13 +16,13 @@ module.exports = {
       folio: Sequelize.TEXT,
       investor_name: { type: Sequelize.TEXT, allowNull: false },
       transaction_type: { type: Sequelize.TEXT, allowNull: false },
-      created_at: { type: Sequelize.DATE, defaultValue: Sequelize.fn("now") },
+      created_at: { type: Sequelize.DATE, defaultValue: Sequelize.fn('now') },
     });
 
-    await queryInterface.addIndex("purchases", ["investor_name"]);
-    await queryInterface.addIndex("purchases", ["scheme"]);
+    await queryInterface.addIndex('purchases', ['investor_name']);
+    await queryInterface.addIndex('purchases', ['scheme']);
   },
   async down(queryInterface) {
-    await queryInterface.dropTable("purchases");
+    await queryInterface.dropTable('purchases');
   },
 };

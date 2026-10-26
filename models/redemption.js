@@ -1,6 +1,6 @@
 module.exports = (sequelize, DataTypes) => {
   const redemption = sequelize.define(
-    "redemptions",
+    'redemptions',
     {
       id: { type: DataTypes.UUID, primaryKey: true },
       date: DataTypes.DATEONLY,

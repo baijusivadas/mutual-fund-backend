@@ -1,6 +1,6 @@
 module.exports = (sequelize, DataTypes) => {
   const authActivityLog = sequelize.define(
-    "auth_activity_logs",
+    'auth_activity_logs',
     {
       id: { type: DataTypes.UUID, primaryKey: true },
       user_id: DataTypes.UUID,

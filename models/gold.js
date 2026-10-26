@@ -1,6 +1,6 @@
 module.exports = (sequelize, DataTypes) => {
   const gold = sequelize.define(
-    "gold",
+    'gold',
     {
       id: { type: DataTypes.UUID, primaryKey: true },
       item_name: DataTypes.TEXT,

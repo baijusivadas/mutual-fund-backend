@@ -1,6 +1,6 @@
 module.exports = (sequelize, DataTypes) => {
   const authUser = sequelize.define(
-    "auth_users",
+    'auth_users',
     {
       id: { type: DataTypes.UUID, primaryKey: true },
       email: { type: DataTypes.TEXT, unique: true },
@@ -11,11 +11,11 @@ module.exports = (sequelize, DataTypes) => {
       is_locked: DataTypes.BOOLEAN,
       created_at: DataTypes.DATE,
     },
-    { tableName: "auth_users", timestamps: false }
+    { tableName: 'auth_users', timestamps: false }
   );
 
   authUser.associate = (models) => {
-    authUser.hasMany(models.User, { foreignKey: "auth_user_id" });
+    authUser.hasMany(models.User, { foreignKey: 'auth_user_id' });
   };
 
   return authUser;

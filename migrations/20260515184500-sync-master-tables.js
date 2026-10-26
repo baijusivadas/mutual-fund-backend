@@ -5,12 +5,12 @@ module.exports = {
     // Countries updates
     await queryInterface.addColumn('countries', 'phone_code', {
       type: Sequelize.STRING(10),
-      allowNull: true
+      allowNull: true,
     });
     await queryInterface.changeColumn('countries', 'iso_code', {
       type: Sequelize.STRING(3),
       allowNull: false,
-      unique: true
+      unique: true,
     });
 
     // States updates
@@ -20,23 +20,23 @@ module.exports = {
     await queryInterface.changeColumn('currencies', 'code', {
       type: Sequelize.STRING(3),
       allowNull: false,
-      unique: true
+      unique: true,
     });
     await queryInterface.changeColumn('currencies', 'symbol', {
       type: Sequelize.STRING(5),
-      allowNull: true
+      allowNull: true,
     });
 
     // Mutual Funds updates
     await queryInterface.addColumn('mutual_funds', 'is_active', {
       type: Sequelize.BOOLEAN,
-      defaultValue: true
+      defaultValue: true,
     });
 
     // Fund Houses updates
     await queryInterface.addColumn('fund_houses', 'registration_number', {
       type: Sequelize.STRING,
-      allowNull: true
+      allowNull: true,
     });
   },
 
@@ -50,12 +50,12 @@ module.exports = {
     // Currencies rollback
     await queryInterface.changeColumn('currencies', 'symbol', {
       type: Sequelize.STRING(10),
-      allowNull: true
+      allowNull: true,
     });
     await queryInterface.changeColumn('currencies', 'code', {
       type: Sequelize.STRING(10),
       allowNull: false,
-      unique: true
+      unique: true,
     });
 
     // States rollback
@@ -65,8 +65,8 @@ module.exports = {
     await queryInterface.changeColumn('countries', 'iso_code', {
       type: Sequelize.STRING(10),
       allowNull: false,
-      unique: true
+      unique: true,
     });
     await queryInterface.removeColumn('countries', 'phone_code');
-  }
+  },
 };

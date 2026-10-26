@@ -1,8 +1,8 @@
 const { logger } = require('../utils/logger');
 
-module.exports = (err, req, res, next) => {
+module.exports = (err, req, res, _next) => {
   // Log the error with full stack in development
-  logger.error(`[${req.method}] ${req.originalUrl} - ${err.message}`);
+  logger.error(`[${req.method}] ${req.path} - ${err.message}`);
   if (err.stack) logger.debug(err.stack);
 
   let status = err.status || 500;

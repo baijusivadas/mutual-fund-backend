@@ -1,6 +1,6 @@
 module.exports = (sequelize, DataTypes) => {
   const error = sequelize.define(
-    "error_logs",
+    'error_logs',
     {
       id: { type: DataTypes.UUID, primaryKey: true },
       user_id: DataTypes.UUID,

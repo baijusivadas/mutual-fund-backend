@@ -1,6 +1,6 @@
 module.exports = (sequelize, DataTypes) => {
   const rental = sequelize.define(
-    "rental_properties",
+    'rental_properties',
     {
       id: { type: DataTypes.UUID, primaryKey: true },
       property_name: DataTypes.TEXT,

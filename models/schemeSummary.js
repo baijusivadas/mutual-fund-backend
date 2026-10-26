@@ -1,6 +1,6 @@
 module.exports = (sequelize, DataTypes) => {
   const schemeSummary = sequelize.define(
-    "scheme_summary",
+    'scheme_summary',
     {
       id: { type: DataTypes.UUID, primaryKey: true },
       scheme_name: DataTypes.TEXT,

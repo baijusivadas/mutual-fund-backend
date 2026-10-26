@@ -3,7 +3,11 @@
 module.exports = {
   async up(queryInterface, Sequelize) {
     await queryInterface.createTable('gold', {
-      id: { type: Sequelize.UUID, primaryKey: true, defaultValue: Sequelize.literal('gen_random_uuid()') },
+      id: {
+        type: Sequelize.UUID,
+        primaryKey: true,
+        defaultValue: Sequelize.literal('gen_random_uuid()'),
+      },
       item_name: Sequelize.TEXT,
       weight: Sequelize.DECIMAL,
       purity: Sequelize.TEXT,
@@ -13,13 +17,13 @@ module.exports = {
       description: Sequelize.TEXT,
       created_by: {
         type: Sequelize.UUID,
-        references: { model: 'auth_users', key: 'id' }
+        references: { model: 'auth_users', key: 'id' },
       },
       created_at: { type: Sequelize.DATE, defaultValue: Sequelize.fn('now') },
-      updated_at: { type: Sequelize.DATE, defaultValue: Sequelize.fn('now') }
+      updated_at: { type: Sequelize.DATE, defaultValue: Sequelize.fn('now') },
     });
   },
   async down(queryInterface) {
     await queryInterface.dropTable('gold');
-  }
+  },
 };

@@ -7,35 +7,35 @@ module.exports = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
-        primaryKey: true
+        primaryKey: true,
       },
       name: {
         type: Sequelize.STRING,
         allowNull: false,
-        unique: true
+        unique: true,
       },
       code: {
         type: Sequelize.STRING(10),
         allowNull: false,
-        unique: true
+        unique: true,
       },
       country_id: {
         type: Sequelize.UUID,
         references: {
           model: 'countries',
-          key: 'id'
-        }
+          key: 'id',
+        },
       },
       created_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('now')
+        defaultValue: Sequelize.fn('now'),
       },
       updated_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('now')
-      }
+        defaultValue: Sequelize.fn('now'),
+      },
     });
 
     // Stock Sectors
@@ -43,23 +43,23 @@ module.exports = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
-        primaryKey: true
+        primaryKey: true,
       },
       name: {
         type: Sequelize.STRING,
         allowNull: false,
-        unique: true
+        unique: true,
       },
       created_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('now')
+        defaultValue: Sequelize.fn('now'),
       },
       updated_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('now')
-      }
+        defaultValue: Sequelize.fn('now'),
+      },
     });
 
     // Stocks
@@ -67,40 +67,40 @@ module.exports = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
-        primaryKey: true
+        primaryKey: true,
       },
       symbol: {
         type: Sequelize.STRING,
         allowNull: false,
-        unique: true
+        unique: true,
       },
       name: {
         type: Sequelize.STRING,
-        allowNull: false
+        allowNull: false,
       },
       isin: {
         type: Sequelize.STRING,
-        unique: true
+        unique: true,
       },
       sector_id: {
         type: Sequelize.UUID,
         references: {
           model: 'stock_sectors',
-          key: 'id'
+          key: 'id',
         },
         onUpdate: 'CASCADE',
-        onDelete: 'SET NULL'
+        onDelete: 'SET NULL',
       },
       created_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('now')
+        defaultValue: Sequelize.fn('now'),
       },
       updated_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('now')
-      }
+        defaultValue: Sequelize.fn('now'),
+      },
     });
 
     // Stock Prices (Daily)
@@ -108,23 +108,23 @@ module.exports = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
-        primaryKey: true
+        primaryKey: true,
       },
       stock_id: {
         type: Sequelize.UUID,
         references: {
           model: 'stocks',
-          key: 'id'
+          key: 'id',
         },
         onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
+        onDelete: 'CASCADE',
       },
       exchange_id: {
         type: Sequelize.UUID,
         references: {
           model: 'stock_exchanges',
-          key: 'id'
-        }
+          key: 'id',
+        },
       },
       open_price: { type: Sequelize.NUMERIC },
       high_price: { type: Sequelize.NUMERIC },
@@ -135,21 +135,21 @@ module.exports = {
       created_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('now')
-      }
+        defaultValue: Sequelize.fn('now'),
+      },
     });
 
     await queryInterface.addConstraint('stock_prices', {
       fields: ['stock_id', 'exchange_id', 'price_date'],
       type: 'unique',
-      name: 'unique_stock_price_per_day'
+      name: 'unique_stock_price_per_day',
     });
   },
 
-  down: async (queryInterface, Sequelize) => {
+  down: async (queryInterface, _Sequelize) => {
     await queryInterface.dropTable('stock_prices');
     await queryInterface.dropTable('stocks');
     await queryInterface.dropTable('stock_sectors');
     await queryInterface.dropTable('stock_exchanges');
-  }
+  },
 };

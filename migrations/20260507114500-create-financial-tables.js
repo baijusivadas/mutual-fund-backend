@@ -7,38 +7,38 @@ module.exports = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
-        primaryKey: true
+        primaryKey: true,
       },
       user_id: {
         type: Sequelize.UUID,
         references: {
           model: 'auth_users',
-          key: 'id'
+          key: 'id',
         },
         onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
+        onDelete: 'CASCADE',
       },
       currency_id: {
         type: Sequelize.UUID,
         references: {
           model: 'currencies',
-          key: 'id'
-        }
+          key: 'id',
+        },
       },
       balance: {
         type: Sequelize.NUMERIC,
-        defaultValue: 0
+        defaultValue: 0,
       },
       created_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('now')
+        defaultValue: Sequelize.fn('now'),
       },
       updated_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('now')
-      }
+        defaultValue: Sequelize.fn('now'),
+      },
     });
 
     // Payment Methods
@@ -46,35 +46,35 @@ module.exports = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
-        primaryKey: true
+        primaryKey: true,
       },
       user_id: {
         type: Sequelize.UUID,
         references: {
           model: 'auth_users',
-          key: 'id'
-        }
+          key: 'id',
+        },
       },
       method_type: {
-        type: Sequelize.STRING // Card, UPI, Bank
+        type: Sequelize.STRING, // Card, UPI, Bank
       },
       provider: {
-        type: Sequelize.STRING // Razorpay, Stripe, etc.
+        type: Sequelize.STRING, // Razorpay, Stripe, etc.
       },
       is_active: {
         type: Sequelize.BOOLEAN,
-        defaultValue: true
+        defaultValue: true,
       },
       created_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('now')
+        defaultValue: Sequelize.fn('now'),
       },
       updated_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('now')
-      }
+        defaultValue: Sequelize.fn('now'),
+      },
     });
 
     // Wallet Transactions
@@ -82,45 +82,45 @@ module.exports = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
-        primaryKey: true
+        primaryKey: true,
       },
       wallet_id: {
         type: Sequelize.UUID,
         references: {
           model: 'wallets',
-          key: 'id'
+          key: 'id',
         },
         onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
+        onDelete: 'CASCADE',
       },
       amount: {
         type: Sequelize.NUMERIC,
-        allowNull: false
+        allowNull: false,
       },
       transaction_type: {
-        type: Sequelize.STRING // Credit, Debit
+        type: Sequelize.STRING, // Credit, Debit
       },
       status: {
         type: Sequelize.STRING,
-        defaultValue: 'Success'
+        defaultValue: 'Success',
       },
       reference_type: {
-        type: Sequelize.STRING // Investment, Deposit, Withdrawal
+        type: Sequelize.STRING, // Investment, Deposit, Withdrawal
       },
       reference_id: {
-        type: Sequelize.UUID
+        type: Sequelize.UUID,
       },
       created_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('now')
-      }
+        defaultValue: Sequelize.fn('now'),
+      },
     });
   },
 
-  down: async (queryInterface, Sequelize) => {
+  down: async (queryInterface, _Sequelize) => {
     await queryInterface.dropTable('wallet_transactions');
     await queryInterface.dropTable('payment_methods');
     await queryInterface.dropTable('wallets');
-  }
+  },
 };

@@ -1,29 +1,33 @@
 module.exports = (sequelize, DataTypes) => {
-  const Investor = sequelize.define('Investor', {
-    id: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
-      primaryKey: true
+  const Investor = sequelize.define(
+    'Investor',
+    {
+      id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true,
+      },
+      user_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
+      },
+      full_name: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      pan: {
+        type: DataTypes.STRING(10),
+        unique: true,
+      },
+      email: DataTypes.STRING,
+      phone: DataTypes.STRING,
+      date_of_birth: DataTypes.DATEONLY,
     },
-    user_id: {
-      type: DataTypes.UUID,
-      allowNull: true
-    },
-    full_name: {
-      type: DataTypes.STRING,
-      allowNull: false
-    },
-    pan: {
-      type: DataTypes.STRING(10),
-      unique: true
-    },
-    email: DataTypes.STRING,
-    phone: DataTypes.STRING,
-    date_of_birth: DataTypes.DATEONLY
-  }, {
-    tableName: 'investors',
-    underscored: true
-  });
+    {
+      tableName: 'investors',
+      underscored: true,
+    }
+  );
 
   Investor.associate = (models) => {
     Investor.belongsTo(models.auth_users, { foreignKey: 'user_id' });

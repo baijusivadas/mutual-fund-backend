@@ -7,45 +7,45 @@ module.exports = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
-        primaryKey: true
+        primaryKey: true,
       },
       user_id: {
         type: Sequelize.UUID,
         references: {
           model: 'auth_users',
-          key: 'id'
+          key: 'id',
         },
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE',
-        allowNull: true
+        allowNull: true,
       },
       full_name: {
         type: Sequelize.STRING,
-        allowNull: false
+        allowNull: false,
       },
       pan: {
         type: Sequelize.STRING(10),
-        unique: true
+        unique: true,
       },
       email: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
       phone: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
       date_of_birth: {
-        type: Sequelize.DATEONLY
+        type: Sequelize.DATEONLY,
       },
       created_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('now')
+        defaultValue: Sequelize.fn('now'),
       },
       updated_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('now')
-      }
+        defaultValue: Sequelize.fn('now'),
+      },
     });
 
     // Investor Addresses
@@ -53,53 +53,53 @@ module.exports = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
-        primaryKey: true
+        primaryKey: true,
       },
       investor_id: {
         type: Sequelize.UUID,
         references: {
           model: 'investors',
-          key: 'id'
+          key: 'id',
         },
         onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
+        onDelete: 'CASCADE',
       },
       address_line1: {
         type: Sequelize.STRING,
-        allowNull: false
+        allowNull: false,
       },
       address_line2: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
       city: {
         type: Sequelize.STRING,
-        allowNull: false
+        allowNull: false,
       },
       state_id: {
         type: Sequelize.UUID,
         references: {
           model: 'states',
-          key: 'id'
-        }
+          key: 'id',
+        },
       },
       pincode: {
         type: Sequelize.STRING(10),
-        allowNull: false
+        allowNull: false,
       },
       address_type: {
         type: Sequelize.STRING,
-        defaultValue: 'Residential'
+        defaultValue: 'Residential',
       },
       created_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('now')
+        defaultValue: Sequelize.fn('now'),
       },
       updated_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('now')
-      }
+        defaultValue: Sequelize.fn('now'),
+      },
     });
 
     // Investor Bank Accounts
@@ -107,47 +107,47 @@ module.exports = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
-        primaryKey: true
+        primaryKey: true,
       },
       investor_id: {
         type: Sequelize.UUID,
         references: {
           model: 'investors',
-          key: 'id'
+          key: 'id',
         },
         onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
+        onDelete: 'CASCADE',
       },
       bank_name: {
         type: Sequelize.STRING,
-        allowNull: false
+        allowNull: false,
       },
       account_number: {
         type: Sequelize.STRING,
-        allowNull: false
+        allowNull: false,
       },
       ifsc_code: {
         type: Sequelize.STRING(15),
-        allowNull: false
+        allowNull: false,
       },
       account_type: {
         type: Sequelize.STRING,
-        defaultValue: 'Savings'
+        defaultValue: 'Savings',
       },
       is_primary: {
         type: Sequelize.BOOLEAN,
-        defaultValue: false
+        defaultValue: false,
       },
       created_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('now')
+        defaultValue: Sequelize.fn('now'),
       },
       updated_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('now')
-      }
+        defaultValue: Sequelize.fn('now'),
+      },
     });
 
     // Investor KYC
@@ -155,38 +155,38 @@ module.exports = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
-        primaryKey: true
+        primaryKey: true,
       },
       investor_id: {
         type: Sequelize.UUID,
         references: {
           model: 'investors',
-          key: 'id'
+          key: 'id',
         },
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE',
-        unique: true
+        unique: true,
       },
       kyc_status: {
         type: Sequelize.STRING,
-        defaultValue: 'Pending'
+        defaultValue: 'Pending',
       },
       verified_at: {
-        type: Sequelize.DATE
+        type: Sequelize.DATE,
       },
       remarks: {
-        type: Sequelize.TEXT
+        type: Sequelize.TEXT,
       },
       created_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('now')
+        defaultValue: Sequelize.fn('now'),
       },
       updated_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('now')
-      }
+        defaultValue: Sequelize.fn('now'),
+      },
     });
     await queryInterface.addIndex('investors', ['user_id']);
     await queryInterface.addIndex('investors', ['pan']);
@@ -195,10 +195,10 @@ module.exports = {
     await queryInterface.addIndex('investor_kyc', ['investor_id']);
   },
 
-  down: async (queryInterface, Sequelize) => {
+  down: async (queryInterface, _Sequelize) => {
     await queryInterface.dropTable('investor_kyc');
     await queryInterface.dropTable('investor_bank_accounts');
     await queryInterface.dropTable('investor_addresses');
     await queryInterface.dropTable('investors');
-  }
+  },
 };

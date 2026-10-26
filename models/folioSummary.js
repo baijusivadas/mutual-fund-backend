@@ -1,6 +1,6 @@
 module.exports = (sequelize, DataTypes) => {
   const folioSummary = sequelize.define(
-    "folio_summary",
+    'folio_summary',
     {
       id: { type: DataTypes.UUID, primaryKey: true },
       folio_no: DataTypes.TEXT,

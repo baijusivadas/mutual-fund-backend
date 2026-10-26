@@ -1,6 +1,6 @@
 module.exports = (sequelize, DataTypes) => {
   const Transaction = sequelize.define(
-    "Transaction",
+    'Transaction',
     {
       id: {
         type: DataTypes.UUID,
@@ -14,18 +14,14 @@ module.exports = (sequelize, DataTypes) => {
       amount: { type: DataTypes.FLOAT, allowNull: false },
     },
     {
-      tableName: "transactions",
-      indexes: [
-        { fields: ["user_id"] },
-        { fields: ["scheme_id"] },
-        { fields: ["date"] }
-      ]
+      tableName: 'transactions',
+      indexes: [{ fields: ['user_id'] }, { fields: ['scheme_id'] }, { fields: ['date'] }],
     }
   );
 
   Transaction.associate = (models) => {
-    Transaction.belongsTo(models.User, { foreignKey: "user_id" });
-    Transaction.belongsTo(models.Scheme, { foreignKey: "scheme_id" });
+    Transaction.belongsTo(models.User, { foreignKey: 'user_id' });
+    Transaction.belongsTo(models.Scheme, { foreignKey: 'scheme_id' });
   };
 
   return Transaction;

@@ -1,6 +1,6 @@
 module.exports = (sequelize, DataTypes) => {
   const roles = sequelize.define(
-    "roles",
+    'roles',
     {
       id: { type: DataTypes.UUID, primaryKey: true },
       name: DataTypes.TEXT,
@@ -15,9 +15,9 @@ module.exports = (sequelize, DataTypes) => {
 
   roles.associate = (models) => {
     roles.belongsToMany(models.sidebar_items, {
-      through: "role_sidebar_items",
-      foreignKey: "role_id",
-      otherKey: "sidebar_item_id",
+      through: 'role_sidebar_items',
+      foreignKey: 'role_id',
+      otherKey: 'sidebar_item_id',
     });
   };
 

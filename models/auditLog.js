@@ -1,6 +1,6 @@
 module.exports = (sequelize, DataTypes) => {
   const auditLog = sequelize.define(
-    "audit_logs",
+    'audit_logs',
     {
       id: { type: DataTypes.UUID, primaryKey: true },
       performed_by: DataTypes.UUID,

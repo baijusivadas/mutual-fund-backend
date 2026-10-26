@@ -1,9 +1,10 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const investorController = require("../controllers/investor.controller");
-const authenticate = require("../middlewares/auth.middleware");
+const investorController = require('../controllers/investor.controller');
+const authenticate = require('../middlewares/auth.middleware');
+const authorize = require('../middlewares/role.middleware');
 
-const validate = require("../middlewares/validate");
+const validate = require('../middlewares/validate');
 
 const investorSchema = {
   full_name: { required: true, type: 'string' },
@@ -12,11 +13,11 @@ const investorSchema = {
 
 router.use(authenticate);
 
-router.post("/investors", validate(investorSchema), investorController.createInvestor);
-router.get("/investors", investorController.getAllInvestors);
-router.get("/investors/:id", investorController.getInvestor);
-router.put("/investors/:id", investorController.updateInvestor);
-router.delete("/investors/:id", investorController.deleteInvestor);
-router.put("/investors/:id/kyc", investorController.updateKYC);
+router.post('/investors', validate(investorSchema), investorController.createInvestor);
+router.get('/investors', investorController.getAllInvestors);
+router.get('/investors/:id', investorController.getInvestor);
+router.put('/investors/:id', investorController.updateInvestor);
+router.delete('/investors/:id', investorController.deleteInvestor);
+router.put('/investors/:id/kyc', authorize(['superAdmin']), investorController.updateKYC);
 
 module.exports = router;
