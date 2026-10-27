@@ -1,51 +1,65 @@
+
 // logger.js
 const winston = require('winston');
 const path = require('path');
 const fs = require('fs');
 
-// Ensure logs directory exists
+const isProduction = process.env.NODE_ENV === 'production';
+
 const logDirectory = path.join(__dirname, '../logs');
-if (!fs.existsSync(logDirectory)) {
+
+// Only create log files during local development.
+if (!isProduction && !fs.existsSync(logDirectory)) {
   fs.mkdirSync(logDirectory, { recursive: true });
 }
 
-// Single shared logger — avoids creating multiple file handles at startup
-const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-    winston.format.printf((info) => {
-      const controller = info.controller ? ` (${info.controller})` : '';
-      return `[${info.timestamp}] ${info.level.toUpperCase()}${controller}: ${info.message}`;
-    })
-  ),
-  transports: [
+const logFormat = winston.format.combine(
+  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+  winston.format.printf((info) => {
+    const controller = info.controller
+      ? ` (${info.controller})`
+      : '';
+
+    return `[${info.timestamp}] ${info.level.toUpperCase()}${controller}: ${info.message}`;
+  })
+);
+
+const transports = [
+  new winston.transports.Console()
+];
+
+// File logging is local-development only.
+if (!isProduction) {
+  transports.push(
     new winston.transports.File({
       filename: path.join(logDirectory, 'app.log'),
     }),
     new winston.transports.File({
       filename: path.join(logDirectory, 'error.log'),
       level: 'error',
-    }),
-    new winston.transports.Console(),
-  ],
+    })
+  );
+}
+
+const logger = winston.createLogger({
+  level: process.env.LOG_LEVEL || 'info',
+  format: logFormat,
+  transports,
 });
 
-/**
- * Returns a child logger bound to a specific controller name.
- * Uses Winston's child() — no new file handles created.
- */
-const createControllerLogger = (controllerName) => {
-  return logger.child({ controller: controllerName });
-};
+const createControllerLogger = (controllerName) =>
+  logger.child({ controller: controllerName });
 
-// HTTP request logger middleware
 const requestLogger = (req, res, next) => {
   const start = Date.now();
+
   res.on('finish', () => {
     const duration = Date.now() - start;
-    logger.info(`${req.method} ${req.path} → ${res.statusCode} (${duration}ms)`);
+    logger.info(
+      `${req.method} ${req.path} → ${res.statusCode} (${duration}ms)`
+    );
   });
+
   next();
 };
 
