@@ -1,11 +1,12 @@
-const rateLimit = require('express-rate-limit');
+﻿const rateLimit = require('express-rate-limit');
 
-const windowMinutes = parseInt(process.env.RATE_LIMIT_WINDOW_MINUTES || '15', 10);
+const windowMs = parseInt(process.env.RATE_LIMIT_WINDOW_MINUTES || '15', 10) * 60 * 1000;
 const max = parseInt(process.env.RATE_LIMIT_MAX || '100', 10);
+const authMax = parseInt(process.env.AUTH_RATE_LIMIT_MAX || '30', 10);
 
-// ── General API limiter (100 req / 15 min) ────────────────────────────────────
+// General API limiter — applied to all routes
 const limiter = rateLimit({
-  windowMs: windowMinutes * 60 * 1000,
+  windowMs,
   max,
   standardHeaders: true,
   legacyHeaders: false,
@@ -15,16 +16,15 @@ const limiter = rateLimit({
   },
 });
 
-// ── Auth-specific limiter (10 req / 15 min) ───────────────────────────────────
-// Applied only to /api/auth/* routes in app.js to block brute-force attacks.
+// Auth-specific limiter — stricter, applied only to /api/auth/* to block brute-force
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 30,
+  windowMs,
+  max: authMax,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
     status: 'error',
-    message: 'Too many auth attempts. Please try again in 15 minutes.',
+    message: `Too many auth attempts. Please try again in ${process.env.RATE_LIMIT_WINDOW_MINUTES || '15'} minutes.`,
   },
 });
 

@@ -5,20 +5,87 @@ const { getCache, setCache } = require('../utils/cache.util');
 const { parseTransactionWorkbook } = require('../utils/transactionFileParser');
 
 /**
+ * Generate a unique normalized signature for a transaction record.
+ */
+const generateTransactionSignature = (t) => {
+  const normDate = String(t.date || '').slice(0, 10);
+  const normScheme = String(t.scheme || '').trim().toLowerCase();
+  const normInvestor = String(t.investor_name || '').trim().toLowerCase();
+  const normFolio = String(t.folio || '').trim().toLowerCase();
+  const normUnits = Number(t.units || 0).toFixed(4);
+  const normAmount = Number(t.amount || 0).toFixed(4);
+  const normType = String(t.transaction_type || '').trim().toLowerCase();
+  return `${normInvestor}|${normFolio}|${normScheme}|${normDate}|${normUnits}|${normAmount}|${normType}`;
+};
+
+/**
+ * Generate a deterministic UUID from transaction signature to prevent duplicates.
+ */
+const generateDeterministicId = (signature) => {
+  const hash = crypto.createHash('sha256').update(signature).digest('hex');
+  return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}-${hash.slice(16, 20)}-${hash.slice(20, 32)}`;
+};
+
+/**
  * Process an uploaded Excel/CSV transaction file and persist records to DB.
+ * Handles deduplication: if the same file is uploaded multiple times, existing values are skipped.
  * @param {string} filePath - Path to the uploaded file on disk
  * @param {string[]} selectedUsers - Optional list of user IDs to map investors to
  * @param {string|null} createdBy - ID of the admin who triggered the upload
  */
 const processTransactionFile = async (filePath, selectedUsers = [], createdBy = null) => {
   const { transactions: parsedTransactions, skipped } = parseTransactionWorkbook(filePath);
+
+  if (parsedTransactions.length === 0) {
+    const error = new Error(
+      `No valid transaction rows found. ${skipped} row(s) were skipped; check the required columns and values.`
+    );
+    error.status = 400;
+    throw error;
+  }
+
+  const uniqueInvestors = new Set(parsedTransactions.map((t) => t.investor_name).filter(Boolean));
+
+  // Fetch existing records for these investors to prevent duplicate inserts when the same file is uploaded again
+  const [existingPurchases, existingRedemptions] = await Promise.all([
+    uniqueInvestors.size > 0
+      ? db.purchases.findAll({
+          where: { investor_name: Array.from(uniqueInvestors) },
+          attributes: ['id', 'investor_name', 'folio', 'scheme', 'date', 'units', 'amount', 'transaction_type'],
+        })
+      : [],
+    uniqueInvestors.size > 0
+      ? db.redemptions.findAll({
+          where: { investor_name: Array.from(uniqueInvestors) },
+          attributes: ['id', 'investor_name', 'folio', 'scheme', 'date', 'units', 'amount', 'transaction_type'],
+        })
+      : [],
+  ]);
+
+  const existingSignatures = new Set([
+    ...existingPurchases.map(generateTransactionSignature),
+    ...existingRedemptions.map(generateTransactionSignature),
+  ]);
+
   const purchasesData = [];
   const redemptionsData = [];
-  const uniqueInvestors = new Set();
+  let duplicateCount = 0;
+  const currentBatchSignatures = new Set();
 
   for (const transaction of parsedTransactions) {
+    const signature = generateTransactionSignature(transaction);
+
+    // Skip if already in database OR duplicate within the same uploaded file
+    if (existingSignatures.has(signature) || currentBatchSignatures.has(signature)) {
+      duplicateCount += 1;
+      continue;
+    }
+
+    currentBatchSignatures.add(signature);
+    const deterministicId = generateDeterministicId(signature);
+
     const record = {
-      id: crypto.randomUUID(),
+      id: deterministicId,
       date: transaction.date,
       scheme: transaction.scheme,
       units: transaction.units,
@@ -29,7 +96,6 @@ const processTransactionFile = async (filePath, selectedUsers = [], createdBy = 
       transaction_type: transaction.transaction_type,
       created_at: new Date(),
     };
-    uniqueInvestors.add(transaction.investor_name);
 
     if (transaction.isRedemption) {
       redemptionsData.push(record);
@@ -38,15 +104,7 @@ const processTransactionFile = async (filePath, selectedUsers = [], createdBy = 
     }
   }
 
-  if (parsedTransactions.length === 0) {
-    const error = new Error(
-      `No valid transaction rows found. ${skipped} row(s) were skipped; check the required columns and values.`
-    );
-    error.status = 400;
-    throw error;
-  }
-
-  // ── Persist to DB ──────────────────────────────────────────────────────────
+  // ── Persist new records to DB ──────────────────────────────────────────────
   if (purchasesData.length > 0) {
     await db.purchases.bulkCreate(purchasesData, { ignoreDuplicates: true });
   }
@@ -90,8 +148,10 @@ const processTransactionFile = async (filePath, selectedUsers = [], createdBy = 
     purchases: purchasesData.length,
     redemptions: redemptionsData.length,
     skipped,
+    duplicatesSkipped: duplicateCount,
     mappedUsers: selectedUsers.length,
     transactions: [...purchasesData, ...redemptionsData],
+    alreadyUploaded: duplicateCount > 0 && purchasesData.length === 0 && redemptionsData.length === 0,
   };
 };
 

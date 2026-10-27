@@ -22,6 +22,7 @@ const sidebarRoute = require('./routes/sidebar.route');
 const investorRoute = require('./routes/investor.route');
 const masterRoute = require('./routes/master.route');
 const userInvestmentRoute = require('./routes/userInvestment.route');
+const chatRoute = require('./routes/chat.route');
 const errorHandler = require('./middlewares/errorHandler');
 
 // ─── Startup Guards ─────────────────────────────────────────────────────────
@@ -116,6 +117,7 @@ app.use('/api/notifications', notificationHistoryRoute);
 app.use('/api', investorRoute);
 app.use('/api', masterRoute);
 app.use('/api', userInvestmentRoute);
+app.use('/api', chatRoute);
 
 // ─── 404 Handler (must be before error handler) ───────────────────────────────
 app.use((req, res) => {

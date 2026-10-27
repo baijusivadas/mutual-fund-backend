@@ -5,10 +5,18 @@ const {
   User,
   user_roles,
   sequelize,
+  Sequelize,
 } = require('../models');
+const { Op } = Sequelize;
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+
+const createAuthError = (message, status = 400) => {
+  const error = new Error(message);
+  error.status = status;
+  return error;
+};
 
 const emailDeliveryUnavailable = () => {
   const error = new Error('Email delivery is not configured');
@@ -26,9 +34,11 @@ const signup = async () => {
 };
 
 const verifyOTP = async (email, otp) => {
-  const pendingUser = await pending_users.findOne({ where: { email } });
+  const pendingUser = await pending_users.findOne({
+    where: { email: { [Op.iLike]: email.trim() } },
+  });
   if (!pendingUser) {
-    throw new Error('No pending signup found for this email');
+    throw createAuthError('No pending signup found for this email', 404);
   }
 
   // Timing-safe OTP comparison to prevent timing attacks
@@ -37,11 +47,11 @@ const verifyOTP = async (email, otp) => {
   const isOtpValid =
     otpBuffer.length === storedBuffer.length && crypto.timingSafeEqual(otpBuffer, storedBuffer);
   if (!isOtpValid) {
-    throw new Error('Invalid OTP');
+    throw createAuthError('Invalid OTP', 400);
   }
 
   if (new Date() > pendingUser.otp_expires_at) {
-    throw new Error('OTP expired');
+    throw createAuthError('OTP expired', 400);
   }
 
   // Wrap in transaction to ensure atomicity
@@ -72,14 +82,16 @@ const verifyOTP = async (email, otp) => {
 };
 
 const login = async (email, password) => {
-  const authUser = await auth_users.findOne({ where: { email } });
+  const authUser = await auth_users.findOne({
+    where: { email: { [Op.iLike]: email.trim() } },
+  });
   if (!authUser) {
-    throw new Error('Invalid credentials');
+    throw createAuthError('Invalid credentials', 401);
   }
 
   const isMatch = await bcrypt.compare(password, authUser.password_hash);
   if (!isMatch) {
-    throw new Error('Invalid credentials');
+    throw createAuthError('Invalid credentials', 401);
   }
 
   // Fetch role before signing so it's embedded in the token
@@ -165,7 +177,7 @@ const deleteUser = async (userId) => {
 const logout = async (token) => {
   const destroyed = await active_sessions.destroy({ where: { token } });
   if (!destroyed) {
-    throw new Error('Session not found or already expired');
+    throw createAuthError('Session not found or already expired', 404);
   }
   return { message: 'Logged out successfully' };
 };
@@ -173,7 +185,7 @@ const logout = async (token) => {
 const updateUserProfile = async (userId, { full_name }) => {
   const user = await User.findOne({ where: { auth_user_id: userId } });
   if (!user) {
-    throw new Error('User not found');
+    throw createAuthError('User not found', 404);
   }
   await user.update({ name: full_name });
   return { message: 'Profile updated successfully' };
