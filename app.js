@@ -1,11 +1,15 @@
+
 require('dotenv').config();
 require('express-async-errors');
+
 const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const path = require('path');
+
 const { limiter, authLimiter } = require('./middlewares/rateLimiter');
 const { requestLogger } = require('./utils/logger');
+
 const authRoute = require('./routes/auth.route');
 const roleRoute = require('./routes/role.route');
 const goldRoute = require('./routes/gold.route');
@@ -23,19 +27,48 @@ const investorRoute = require('./routes/investor.route');
 const masterRoute = require('./routes/master.route');
 const userInvestmentRoute = require('./routes/userInvestment.route');
 const chatRoute = require('./routes/chat.route');
+
 const errorHandler = require('./middlewares/errorHandler');
 
-// ─── Startup Guards ─────────────────────────────────────────────────────────
+// ─── Startup Guards ──────────────────────────────────────────────────────────
 if (!process.env.JWT_SECRET) {
   throw new Error('FATAL: JWT_SECRET environment variable is not set.');
 }
+
 if (process.env.JWT_SECRET.length < 32) {
-  console.warn(
-    'WARNING: JWT_SECRET is shorter than 32 characters; consider using a stronger secret.'
-  );
+  console.warn('WARNING: JWT_SECRET should be at least 32 characters.');
 }
 
 const app = express();
+
+// ─── CORS ────────────────────────────────────────────────────────────────────
+// Set ALLOWED_ORIGINS in Vercel to your exact frontend origin.
+// Multiple origins can be comma-separated.
+const allowedOrigins = (
+  process.env.ALLOWED_ORIGINS ||
+  'http://localhost:8080,https://mutual-fund-frontend-xi.vercel.app'
+)
+  .split(',')
+  .map((origin) => origin.trim().replace(/\/+$/, ''))
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Permit requests without Origin (e.g. health checks and server-to-server).
+      if (!origin || allowedOrigins.includes(origin.replace(/\/+$/, ''))) {
+        return callback(null, true);
+      }
+
+      console.warn('CORS blocked origin:', origin);
+      return callback(null, false);
+    },
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+    optionsSuccessStatus: 204,
+  })
+);
 
 // ─── Security Headers ────────────────────────────────────────────────────────
 app.use(
@@ -51,56 +84,34 @@ app.use(
   })
 );
 
-// ─── CORS — allowlist from environment ───────────────────────────────────────
-const configuredOrigins = (
-  process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:8080'
-)
-  .split(',')
-  .map((o) => o.trim());
-const ALLOWED_ORIGINS =
-  process.env.NODE_ENV === 'production'
-    ? configuredOrigins
-    : [
-        ...new Set([
-          ...configuredOrigins,
-          ...configuredOrigins.map((origin) => origin.replace('://localhost', '://127.0.0.1')),
-        ]),
-      ];
-
-console.log('CORS: Allowed Origins:', ALLOWED_ORIGINS);
-
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (curl, Postman, server-to-server)
-      if (!origin || ALLOWED_ORIGINS.includes(origin)) {
-        return callback(null, true);
-      }
-      console.log('CORS: Blocked Origin:', origin);
-      callback(null, false); // Fail CORS without throwing an error to the whole app
-    },
-    credentials: true,
-  })
-);
-
-// ─── Body Parsing ─────────────────────────────────────────────────────────────
+// ─── Body Parsing ────────────────────────────────────────────────────────────
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ─── Rate Limiting ────────────────────────────────────────────────────────────
+// ─── Rate Limiting ───────────────────────────────────────────────────────────
 app.use(limiter);
 
-// ─── HTTP Request Logging ─────────────────────────────────────────────────────
+// ─── Request Logging ─────────────────────────────────────────────────────────
 app.use(requestLogger);
 
-// ─── Static Files ─────────────────────────────────────────────────────────────
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// ─── Static Files ────────────────────────────────────────────────────────────
+// Vercel does not serve files through express.static() in the usual way.
+// Keep this for local development; use a persistent external store for uploads
+// in production if the application needs uploaded files to remain available.
+if (process.env.NODE_ENV !== 'production') {
+  app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+}
 
-// ─── Health Check ─────────────────────────────────────────────────────────────
-app.get('/', (req, res) => res.json({ status: 'ok', ts: new Date().toISOString() }));
+// ─── Health Check ────────────────────────────────────────────────────────────
+app.get('/', (req, res) => {
+  res.json({
+    status: 'ok',
+    message: 'Mutual Fund API is running',
+    timestamp: new Date().toISOString(),
+  });
+});
 
-// ─── Routes ───────────────────────────────────────────────────────────────────
-// Auth routes get a stricter rate limiter (10 req / 15 min) to block brute-force
+// ─── API Routes ──────────────────────────────────────────────────────────────
 app.use('/api/auth', authLimiter, authRoute);
 app.use('/api', transactionRoute);
 app.use('/api', roleRoute);
@@ -119,35 +130,26 @@ app.use('/api', masterRoute);
 app.use('/api', userInvestmentRoute);
 app.use('/api', chatRoute);
 
-// ─── 404 Handler (must be before error handler) ───────────────────────────────
+// ─── 404 Handler ─────────────────────────────────────────────────────────────
 app.use((req, res) => {
-  res.status(404).json({ status: 'error', message: 'Not Found' });
+  res.status(404).json({
+    status: 'error',
+    message: 'Not Found',
+    path: req.path,
+  });
 });
 
-// ─── Centralized Error Handler (must be last) ─────────────────────────────────
+// ─── Centralized Error Handler ───────────────────────────────────────────────
 app.use(errorHandler);
 
-const defaultPort = 3000;
-const PORT = process.env.PORT ? parseInt(process.env.PORT) : defaultPort;
+// ─── Local Development / Vercel Export ───────────────────────────────────────
+// Vercel manages the request lifecycle. Do not start a separate listener there.
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
 
-const server = app.listen(PORT, () => {
-  console.log(`✅ Server running on http://localhost:${PORT}`);
-});
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
 
-server.on('error', (err) => {
-  if (err.code === 'EADDRINUSE') {
-    const fallbackPort = process.env.PORT_FALLBACK ? parseInt(process.env.PORT_FALLBACK) : 0;
-    if (fallbackPort) {
-      server.close();
-      app.listen(fallbackPort, () => {
-        console.log(`⚠️ Port ${PORT} in use. Fallback to port ${fallbackPort}`);
-      });
-    } else {
-      console.error(`❌ Port ${PORT} already in use and no fallback provided.`);
-      process.exitCode = 1;
-    }
-  } else {
-    console.error('Server error:', err);
-    process.exitCode = 1;
-  }
-});
+module.exports = app;
