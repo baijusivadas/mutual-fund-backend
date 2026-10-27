@@ -18,7 +18,7 @@ services:
 
   app:
     build: .
-    command: npm run dev
+    command: node --watch app.js
     restart: unless-stopped
     ports:
       - "3000:3000"
