@@ -8,7 +8,7 @@
     "dev": "nodemon app.js",
     "start:dev": "nodemon app.js",
     "start:prod": "node app.js",
-    "test": "node --test",
+    "test": "node --test --test-force-exit",
     "lint": "eslint .",
     "format": "prettier --write \"**/*.js\" \"!node_modules/**\" \"!logs/**\" \"!uploads/**\"",
     "format:check": "prettier --check \"**/*.js\" \"!node_modules/**\" \"!logs/**\" \"!uploads/**\"",

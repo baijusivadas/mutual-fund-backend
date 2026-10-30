@@ -1,3 +1,6 @@
+require('dotenv').config();
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret-at-least-32-chars-long-abcdef';
+
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const authService = require('../services/auth.service');

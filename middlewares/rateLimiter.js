@@ -1,8 +1,13 @@
-﻿const rateLimit = require('express-rate-limit');
+const rateLimit = require('express-rate-limit');
+const {
+  RATE_LIMIT_WINDOW_MINUTES,
+  RATE_LIMIT_MAX,
+  AUTH_RATE_LIMIT_MAX,
+} = require('../config/constants');
 
-const windowMs = parseInt(process.env.RATE_LIMIT_WINDOW_MINUTES || '15', 10) * 60 * 1000;
-const max = parseInt(process.env.RATE_LIMIT_MAX || '100', 10);
-const authMax = parseInt(process.env.AUTH_RATE_LIMIT_MAX || '30', 10);
+const windowMs = RATE_LIMIT_WINDOW_MINUTES * 60 * 1000;
+const max = RATE_LIMIT_MAX;
+const authMax = AUTH_RATE_LIMIT_MAX;
 
 // General API limiter — applied to all routes
 const limiter = rateLimit({
@@ -24,7 +29,7 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
   message: {
     status: 'error',
-    message: `Too many auth attempts. Please try again in ${process.env.RATE_LIMIT_WINDOW_MINUTES || '15'} minutes.`,
+    message: `Too many auth attempts. Please try again in ${RATE_LIMIT_WINDOW_MINUTES} minutes.`,
   },
 });
 

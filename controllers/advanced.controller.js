@@ -1,5 +1,6 @@
 const advancedService = require('../services/advanced.service');
 const { createControllerLogger } = require('../utils/logger');
+const { DEFAULT_PAGE, DEFAULT_PAGE_LIMIT } = require('../config/constants');
 const logger = createControllerLogger('advancedController');
 
 const createItem = async (req, res, next) => {
@@ -17,7 +18,7 @@ const createItem = async (req, res, next) => {
 const getAllItems = async (req, res, next) => {
   try {
     const entity = req.params.entity || req.model;
-    const { page = 1, limit = 20 } = req.query;
+    const { page = DEFAULT_PAGE, limit = DEFAULT_PAGE_LIMIT } = req.query;
     const result = await advancedService.getAllItems(
       entity,
       req.user.id,

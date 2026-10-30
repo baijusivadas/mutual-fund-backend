@@ -1,4 +1,5 @@
 const db = require('../models');
+const { DEFAULT_PAGE, DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } = require('../config/constants');
 
 const ALLOWED_ENTITIES = [
   'crypto_investments',
@@ -47,16 +48,22 @@ const createItem = async (entityName, data, userId, userRole) => {
  * @param {string} entityName
  * @param {string} userId
  * @param {string} userRole
- * @param {number} page  - 1-based page number (default: 1)
- * @param {number} limit - records per page (default: 20, max: 100)
+ * @param {number} page  - 1-based page number (default: DEFAULT_PAGE)
+ * @param {number} limit - records per page (default: DEFAULT_PAGE_LIMIT, max: MAX_PAGE_LIMIT)
  */
-const getAllItems = async (entityName, userId, userRole, page = 1, limit = 20) => {
+const getAllItems = async (
+  entityName,
+  userId,
+  userRole,
+  page = DEFAULT_PAGE,
+  limit = DEFAULT_PAGE_LIMIT
+) => {
   const model = getModel(entityName, userRole);
   const where = userRole === 'superAdmin' ? {} : { created_by: userId };
 
-  // Clamp limit to prevent overly large queries
-  const safeLimit = Math.min(Math.max(parseInt(limit) || 20, 1), 100);
-  const safeOffset = (Math.max(parseInt(page) || 1, 1) - 1) * safeLimit;
+  // Clamp limit dynamically using configurable bounds
+  const safeLimit = Math.min(Math.max(parseInt(limit, 10) || DEFAULT_PAGE_LIMIT, 1), MAX_PAGE_LIMIT);
+  const safeOffset = (Math.max(parseInt(page, 10) || DEFAULT_PAGE, 1) - 1) * safeLimit;
 
   const { count, rows } = await model.findAndCountAll({
     where,
@@ -69,7 +76,7 @@ const getAllItems = async (entityName, userId, userRole, page = 1, limit = 20) =
     data: rows,
     pagination: {
       total: count,
-      page: Math.max(parseInt(page) || 1, 1),
+      page: Math.max(parseInt(page, 10) || DEFAULT_PAGE, 1),
       limit: safeLimit,
       totalPages: Math.ceil(count / safeLimit),
     },

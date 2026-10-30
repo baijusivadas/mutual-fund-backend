@@ -11,6 +11,7 @@ const { Op } = Sequelize;
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const { JWT_EXPIRES_IN, SESSION_DURATION_MS } = require('../config/constants');
 
 const createAuthError = (message, status = 400) => {
   const error = new Error(message);
@@ -100,14 +101,14 @@ const login = async (email, password) => {
   const role = userRoleRecord ? userRoleRecord.role : 'user';
 
   const token = jwt.sign({ id: authUser.id, email: authUser.email, role }, process.env.JWT_SECRET, {
-    expiresIn: '24h',
+    expiresIn: JWT_EXPIRES_IN,
   });
 
   await active_sessions.create({
     id: crypto.randomUUID(),
     auth_user_id: authUser.id,
     token,
-    expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    expires_at: new Date(Date.now() + SESSION_DURATION_MS),
   });
 
   const user = await User.findOne({ where: { auth_user_id: authUser.id } });

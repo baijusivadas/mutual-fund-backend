@@ -81,6 +81,10 @@ test('imports an uploaded workbook into purchase, redemption, and user mapping r
   XLSX.writeFile(workbook, filePath);
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
 
+  const originalPurchasesFindAll = db.purchases.findAll;
+  const originalRedemptionsFindAll = db.redemptions.findAll;
+  db.purchases.findAll = async () => [];
+  db.redemptions.findAll = async () => [];
   const originalPurchases = db.purchases.bulkCreate;
   const originalRedemptions = db.redemptions.bulkCreate;
   const originalMappings = db.user_investment_mappings.bulkCreate;

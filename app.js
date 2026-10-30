@@ -1,4 +1,3 @@
-
 require('dotenv').config();
 require('express-async-errors');
 
@@ -9,6 +8,7 @@ const path = require('path');
 
 const { limiter, authLimiter } = require('./middlewares/rateLimiter');
 const { requestLogger } = require('./utils/logger');
+const { DEFAULT_PORT, DEFAULT_ALLOWED_ORIGINS } = require('./config/constants');
 
 const authRoute = require('./routes/auth.route');
 const roleRoute = require('./routes/role.route');
@@ -27,6 +27,7 @@ const investorRoute = require('./routes/investor.route');
 const masterRoute = require('./routes/master.route');
 const userInvestmentRoute = require('./routes/userInvestment.route');
 const chatRoute = require('./routes/chat.route');
+const marketRoute = require('./routes/market.route');
 
 const errorHandler = require('./middlewares/errorHandler');
 
@@ -44,10 +45,7 @@ const app = express();
 // ─── CORS ────────────────────────────────────────────────────────────────────
 // Set ALLOWED_ORIGINS in Vercel to your exact frontend origin.
 // Multiple origins can be comma-separated.
-const allowedOrigins = (
-  process.env.ALLOWED_ORIGINS ||
-  'http://localhost:8080,https://mutual-fund-frontend-xi.vercel.app'
-)
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || DEFAULT_ALLOWED_ORIGINS)
   .split(',')
   .map((origin) => origin.trim().replace(/\/+$/, ''))
   .filter(Boolean);
@@ -129,6 +127,7 @@ app.use('/api', investorRoute);
 app.use('/api', masterRoute);
 app.use('/api', userInvestmentRoute);
 app.use('/api', chatRoute);
+app.use('/api', marketRoute);
 
 // ─── 404 Handler ─────────────────────────────────────────────────────────────
 app.use((req, res) => {
@@ -145,7 +144,7 @@ app.use(errorHandler);
 // ─── Local Development / Vercel Export ───────────────────────────────────────
 // Vercel manages the request lifecycle. Do not start a separate listener there.
 if (require.main === module) {
-  const PORT = process.env.PORT || 3000;
+  const PORT = DEFAULT_PORT;
 
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
