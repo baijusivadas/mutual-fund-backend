@@ -147,14 +147,14 @@ const updateUserRole = async (userId, newRole) => {
     const result = userRoleRecord
       ? await userRoleRecord.update({ role: newRole }, { transaction: t })
       : await user_roles.create(
-          {
-            id: crypto.randomUUID(),
-            user_id: userId,
-            role: newRole,
-            created_at: new Date(),
-          },
-          { transaction: t }
-        );
+        {
+          id: crypto.randomUUID(),
+          user_id: userId,
+          role: newRole,
+          created_at: new Date(),
+        },
+        { transaction: t }
+      );
 
     await active_sessions.destroy({
       where: { auth_user_id: userId },

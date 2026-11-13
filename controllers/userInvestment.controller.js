@@ -6,10 +6,11 @@ const getUserInvestments = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const isSuperAdmin = req.user.role === 'superAdmin';
+    const isAdvisor = req.user.role === 'advisor';
 
     // 1. Fetch user mappings
     let mappings = [];
-    if (isSuperAdmin) {
+    if (isSuperAdmin || isAdvisor) {
       mappings = await user_investment_mappings.findAll();
     } else {
       mappings = await user_investment_mappings.findAll({
@@ -26,7 +27,7 @@ const getUserInvestments = async (req, res, next) => {
     let userPurchases = [];
     let userRedemptions = [];
 
-    if (isSuperAdmin) {
+    if (isSuperAdmin || isAdvisor) {
       userPurchases = await purchases.findAll({ order: [['date', 'DESC']] });
       userRedemptions = await redemptions.findAll({ order: [['date', 'DESC']] });
     } else if (mappedInvestorNames.length > 0) {

@@ -73,12 +73,12 @@ module.exports = {
       // Asset Management
       { name: 'Liabilities', href: '/liabilities', icon: 'TrendingDown', display_order: 4 },
       { name: 'Other Assets', href: '/other-assets', icon: 'Landmark', display_order: 5 },
-      { name: 'Real Estate', href: '/admin/real-estate', icon: 'Building2', display_order: 6 },
-      { name: 'Gold', href: '/admin/gold', icon: 'Coins', display_order: 7 },
-      { name: 'Flats', href: '/admin/flats', icon: 'Home', display_order: 8 },
+      { name: 'Real Estate', href: '/real-estate', icon: 'Building2', display_order: 6 },
+      { name: 'Gold', href: '/gold', icon: 'Coins', display_order: 7 },
+      { name: 'Flats', href: '/flats', icon: 'Home', display_order: 8 },
       {
         name: 'Rental Properties',
-        href: '/admin/rental-properties',
+        href: '/rental-properties',
         icon: 'KeyRound',
         display_order: 9,
       },
@@ -101,26 +101,27 @@ module.exports = {
         display_order: 13,
       },
       { name: 'Stock Reports', href: '/stock-reports', icon: 'TrendingUp', display_order: 14 },
-      { name: 'Analytics', href: '/admin/analytics', icon: 'BarChart3', display_order: 15 },
+      { name: 'Analytics', href: '/analytics', icon: 'BarChart3', display_order: 15 },
       { name: 'P&L Report', href: '/pnl', icon: 'TrendingDown', display_order: 16 },
       { name: 'Capital Gains', href: '/capital-gains', icon: 'TrendingUp', display_order: 17 },
       {
         name: 'Notification History',
-        href: '/admin/notifications',
+        href: '/notifications',
         icon: 'Bell',
         display_order: 18,
       },
 
       // Administration
-      { name: 'User Management', href: '/admin/users', icon: 'Users', display_order: 19 },
-      { name: 'Roles Management', href: '/admin/roles', icon: 'Shield', display_order: 20 },
-      { name: 'Data Upload', href: '/admin/data-upload', icon: 'Upload', display_order: 21 },
+      { name: 'User Management', href: '/users', icon: 'Users', display_order: 19 },
+      { name: 'Roles Management', href: '/roles', icon: 'Shield', display_order: 20 },
+      { name: 'Data Upload', href: '/data-upload', icon: 'Upload', display_order: 21 },
       {
         name: 'User Investment Mapping',
-        href: '/admin/user-investment-mapping',
+        href: '/user-investment-mapping',
         icon: 'Link2',
         display_order: 22,
       },
+      { name: 'Admin Overview', href: '/admin-dashboard', icon: 'LayoutDashboard', display_order: 23 },
     ].map((item) => ({
       ...item,
       id: randomUUID(),
@@ -133,9 +134,23 @@ module.exports = {
     // 4. Map Sidebar Items to Roles
     const roleSidebarItems = [];
 
+    const adminOnlyHrefs = new Set([
+      '/real-estate',
+      '/gold',
+      '/flats',
+      '/rental-properties',
+      '/analytics',
+      '/notifications',
+      '/users',
+      '/roles',
+      '/data-upload',
+      '/user-investment-mapping',
+      '/admin-dashboard',
+    ]);
+
     // User role gets non-admin items
     sidebarItemsData
-      .filter((item) => !item.href.startsWith('/admin/'))
+      .filter((item) => !adminOnlyHrefs.has(item.href))
       .forEach((item) => {
         roleSidebarItems.push({
           id: randomUUID(),

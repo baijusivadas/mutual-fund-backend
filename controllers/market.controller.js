@@ -82,14 +82,14 @@ async function fetchFromYahoo() {
                 r.symbol === '^NSEI'
                   ? 'NIFTY 50'
                   : r.symbol === '^BSESN'
-                  ? 'BSE SENSEX'
-                  : 'NIFTY BANK';
+                    ? 'BSE SENSEX'
+                    : 'NIFTY BANK';
               const code =
                 r.symbol === '^NSEI'
                   ? 'NIFTY'
                   : r.symbol === '^BSESN'
-                  ? 'SENSEX'
-                  : 'BANKNIFTY';
+                    ? 'SENSEX'
+                    : 'BANKNIFTY';
 
               return {
                 name,
@@ -166,4 +166,3 @@ module.exports = {
   getLiveIndices,
   handleGetIndices,
 };
-
