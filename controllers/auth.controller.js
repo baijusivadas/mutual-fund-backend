@@ -1,3 +1,5 @@
+'use strict';
+
 const authService = require('../services/auth.service');
 const { sendSuccess } = require('../utils/responseHelper');
 const { createControllerLogger } = require('../utils/logger');
@@ -18,8 +20,24 @@ const verifyUserOTP = async (req, res) => {
 
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
-  const result = await authService.login(email, password);
+  const context = {
+    ip: req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+    userAgent: req.headers['user-agent'],
+  };
+  const result = await authService.login(email, password, context);
   logger.info(`User logged in: ${email}`);
+
+  // Set secure HttpOnly session cookie
+  if (result.token) {
+    res.cookie('token', result.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+      maxAge: 24 * 60 * 60 * 1000,
+      path: '/',
+    });
+  }
+
   sendSuccess(res, result, 'Logged in successfully');
 };
 
@@ -30,7 +48,8 @@ const forgotUserPassword = async (req, res) => {
 };
 
 const getUsers = async (req, res) => {
-  const users = await authService.getAllUsersWithRoles();
+  const tenantId = req.user.role === 'superAdmin' ? req.query.tenantId || null : req.user.tenantId;
+  const users = await authService.getAllUsersWithRoles(tenantId);
   sendSuccess(res, users);
 };
 
@@ -50,20 +69,26 @@ const deleteUser = async (req, res) => {
 };
 
 const logoutUser = async (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) {
-    return res.status(400).json({ status: 'error', message: 'No token provided' });
+  let token = req.headers.authorization?.split(' ')[1];
+  if (!token && req.headers.cookie) {
+    const cookies = Object.fromEntries(
+      req.headers.cookie.split(';').map((c) => c.trim().split('='))
+    );
+    token = cookies.token || cookies.auth_token;
   }
-  const result = await authService.logout(token);
-  logger.info(`User logged out: ${req.user?.email}`);
-  sendSuccess(res, result, 'Logged out successfully');
+
+  res.clearCookie('token', { path: '/' });
+
+  if (token) {
+    await authService.logout(token).catch(() => {});
+  }
+  logger.info(`User logged out: ${req.user?.email || 'session'}`);
+  sendSuccess(res, { loggedOut: true }, 'Logged out successfully');
 };
 
 const updateUserProfile = async (req, res) => {
-  const { userId } = req.params;
-  const { full_name } = req.body;
-  const result = await authService.updateUserProfile(userId, { full_name });
-  logger.info(`User profile updated: ${userId}`);
+  const result = await authService.updateUserProfile(req.user.id, req.body);
+  logger.info(`User profile updated: ${req.user.id}`);
   sendSuccess(res, result, 'Profile updated successfully');
 };
 
@@ -71,10 +96,10 @@ module.exports = {
   signupUser,
   verifyUserOTP,
   loginUser,
-  logoutUser,
   forgotUserPassword,
   getUsers,
   updateUserRole,
-  updateUserProfile,
   deleteUser,
+  logoutUser,
+  updateUserProfile,
 };

@@ -1,11 +1,15 @@
+'use strict';
+
 require('dotenv').config();
 require('express-async-errors');
 const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const path = require('path');
+const requestId = require('./middlewares/requestId');
 const { limiter, authLimiter } = require('./middlewares/rateLimiter');
 const { requestLogger } = require('./utils/logger');
+
 const authRoute = require('./routes/auth.route');
 const roleRoute = require('./routes/role.route');
 const goldRoute = require('./routes/gold.route');
@@ -23,6 +27,11 @@ const investorRoute = require('./routes/investor.route');
 const masterRoute = require('./routes/master.route');
 const userInvestmentRoute = require('./routes/userInvestment.route');
 const chatRoute = require('./routes/chat.route');
+const marketRoute = require('./routes/market.route');
+const aiRoute = require('./routes/ai.route');
+const organizationRoute = require('./routes/organization.route');
+const auditRoute = require('./routes/audit.route');
+const financialRoute = require('./routes/financial.route');
 const errorHandler = require('./middlewares/errorHandler');
 
 // ─── Startup Guards ─────────────────────────────────────────────────────────
@@ -51,41 +60,33 @@ app.use(
   })
 );
 
-// ─── CORS — allowlist from environment ───────────────────────────────────────
-const configuredOrigins = (
-  process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:8080'
+// ─── Request Correlation ID (tracing) ─────────────────────────────────────────
+app.use(requestId);
+
+// ─── CORS ─────────────────────────────────────────────────────────────────────
+const allowedOrigins = (
+  process.env.ALLOWED_ORIGINS ||
+  'http://localhost:8080,http://localhost:5173,http://localhost:3000'
 )
   .split(',')
-  .map((o) => o.trim());
-const ALLOWED_ORIGINS =
-  process.env.NODE_ENV === 'production'
-    ? configuredOrigins
-    : [
-        ...new Set([
-          ...configuredOrigins,
-          ...configuredOrigins.map((origin) => origin.replace('://localhost', '://127.0.0.1')),
-        ]),
-      ];
-
-console.log('CORS: Allowed Origins:', ALLOWED_ORIGINS);
+  .map((o) => o.trim())
+  .filter(Boolean);
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (curl, Postman, server-to-server)
-      if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+      if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
         return callback(null, true);
       }
-      console.log('CORS: Blocked Origin:', origin);
-      callback(null, false); // Fail CORS without throwing an error to the whole app
+      callback(null, false);
     },
     credentials: true,
   })
 );
 
 // ─── Body Parsing ─────────────────────────────────────────────────────────────
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ─── Rate Limiting ────────────────────────────────────────────────────────────
 app.use(limiter);
@@ -97,11 +98,23 @@ app.use(requestLogger);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
-app.get('/', (req, res) => res.json({ status: 'ok', ts: new Date().toISOString() }));
+app.get('/', (req, res) =>
+  res.json({
+    status: 'ok',
+    success: true,
+    service: 'mutual-fund-backend',
+    version: '1.0.0',
+    ts: new Date().toISOString(),
+  })
+);
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
-// Auth routes get a stricter rate limiter (10 req / 15 min) to block brute-force
 app.use('/api/auth', authLimiter, authRoute);
+app.use('/api', organizationRoute);
+app.use('/api', auditRoute);
+app.use('/api', financialRoute);
+app.use('/api', marketRoute);
+app.use('/api', aiRoute);
 app.use('/api', transactionRoute);
 app.use('/api', roleRoute);
 app.use('/api', goldRoute);
@@ -119,35 +132,49 @@ app.use('/api', masterRoute);
 app.use('/api', userInvestmentRoute);
 app.use('/api', chatRoute);
 
-// ─── 404 Handler (must be before error handler) ───────────────────────────────
+// ─── 404 Handler ──────────────────────────────────────────────────────────────
 app.use((req, res) => {
-  res.status(404).json({ status: 'error', message: 'Not Found' });
+  res.status(404).json({
+    success: false,
+    status: 'error',
+    statusCode: 404,
+    errorCode: 'NOT_FOUND',
+    message: `Endpoint ${req.method} ${req.path} not found`,
+    meta: {
+      requestId: req.id,
+      timestamp: new Date().toISOString(),
+    },
+  });
 });
 
-// ─── Centralized Error Handler (must be last) ─────────────────────────────────
+// ─── Centralized Error Handler ─────────────────────────────────────────────────
 app.use(errorHandler);
 
 const defaultPort = 3000;
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : defaultPort;
 
-const server = app.listen(PORT, () => {
-  console.log(`✅ Server running on http://localhost:${PORT}`);
-});
+if (require.main === module) {
+  const server = app.listen(PORT, () => {
+    console.log(`✅ Server running on http://localhost:${PORT}`);
+  });
 
-server.on('error', (err) => {
-  if (err.code === 'EADDRINUSE') {
-    const fallbackPort = process.env.PORT_FALLBACK ? parseInt(process.env.PORT_FALLBACK) : 0;
-    if (fallbackPort) {
-      server.close();
-      app.listen(fallbackPort, () => {
-        console.log(`⚠️ Port ${PORT} in use. Fallback to port ${fallbackPort}`);
-      });
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      const fallbackPort = process.env.PORT_FALLBACK ? parseInt(process.env.PORT_FALLBACK) : 0;
+      if (fallbackPort) {
+        server.close();
+        app.listen(fallbackPort, () => {
+          console.log(`⚠️ Port ${PORT} in use. Fallback to port ${fallbackPort}`);
+        });
+      } else {
+        console.error(`❌ Port ${PORT} already in use and no fallback provided.`);
+        process.exitCode = 1;
+      }
     } else {
-      console.error(`❌ Port ${PORT} already in use and no fallback provided.`);
+      console.error('Server error:', err);
       process.exitCode = 1;
     }
-  } else {
-    console.error('Server error:', err);
-    process.exitCode = 1;
-  }
-});
+  });
+}
+
+module.exports = app;

@@ -1,26 +1,27 @@
-﻿const { createControllerLogger } = require('../utils/logger');
+const { createControllerLogger } = require('../utils/logger');
+const MarketService = require('../services/market.service');
 const logger = createControllerLogger('chatController');
 
-const SYSTEM_PROMPT = `
-You are BrickWealth AI, an expert wealth intelligence and portfolio advisor assistant for the BrickWealth platform.
+const BASE_SYSTEM_PROMPT = `
+You are BrickWealth AI, an elite wealth intelligence and portfolio advisor assistant for the BrickWealth platform.
 
-Your expertise includes:
-- Portfolio tracking across mutual funds, direct equity/stocks, real estate, gold, flats, and rental properties.
-- Performance metrics: XIRR (extended internal rate of return), CAGR, absolute returns, benchmark comparisons (vs Nifty 50, Sensex).
-- Capital gains calculation: Short-Term Capital Gains (STCG) and Long-Term Capital Gains (LTCG) according to Indian tax regulations.
-- Transaction data uploads: Guiding users to import Excel/CSV files, automapping investors to user portfolios, and handling duplicate checks.
-- Liabilities, rentals, and cash flow tracking.
-- Navigation of BrickWealth features and role management (SuperAdmin vs Standard User).
+Your capabilities:
+1. Portfolio tracking: Mutual funds, Direct stocks, Real estate, Gold (MCX / Sovereign bonds), Flats, Rental income yields, and Liabilities.
+2. Financial analysis: XIRR, CAGR, absolute returns, asset allocation drift, SIP discipline, and benchmark comparisons (Nifty 50, Sensex).
+3. Capital gains taxation: Indian Finance Act 2024 regulations:
+   - Equity MF STCG (holding period <= 12 months): 20%
+   - Equity MF LTCG (holding period > 12 months): 12.5% above ₹1.25 Lakh annual exemption limit
+   - Debt funds (purchased after April 1, 2023): Taxed at individual slab rates
+4. Real-time market context: You have direct access to live Indian benchmark indices and commodity rates provided in the context below. Always quote these numbers accurately when asked.
 
-Rules:
-1. Be concise, professional, warm, and practical.
-2. Provide clear financial context and actionable guidance.
-3. If discussing tax details, mention current Indian income tax guidelines (e.g. STCG at 20%, LTCG at 12.5% above ₹1.25 lakh exemption limit) and advise consulting a certified tax advisor for official filing.
-4. Keep answers readable with markdown bullet points where appropriate.
+Tone and style:
+- Precise, authoritative, concise, polite, and practical.
+- Use clean Markdown tables and bullet points for readability.
+- When asked for current Nifty / Sensex / Gold levels, cite the live data from the context.
 `;
 
 const handleChat = async (req, res) => {
-  const { messages } = req.body;
+  const { messages, portfolioContext } = req.body;
   if (!Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: 'Messages array is required.' });
   }
@@ -36,7 +37,7 @@ const handleChat = async (req, res) => {
   }
 
   const apiKey = process.env.LLM_API_KEY || '';
-  const apiUrl = process.env.LLM_API_URL || 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+  const apiUrl = process.env.LLM_API_URL || 'https://generativelanguage.googleapis.com/v1beta/models';
   const model = process.env.LLM_MODEL || 'gemini-2.5-flash';
 
   if (!apiKey || apiKey === 'your-llm-api-key') {
@@ -45,19 +46,85 @@ const handleChat = async (req, res) => {
     });
   }
 
+  // Enforce authenticated investor context authorization
+  if (portfolioContext && portfolioContext.investorName && req.user) {
+    const investorName = String(portfolioContext.investorName).trim();
+    const isElevated =
+      req.user.role === 'superAdmin' || req.user.role === 'advisor' || req.user.role === 'orgAdmin';
+
+    if (!isElevated && investorName !== 'Valued Client' && investorName !== 'Client') {
+      const db = require('../models');
+      const isSelf = req.user.name && req.user.name.toLowerCase() === investorName.toLowerCase();
+      if (!isSelf && db.user_investor_mappings) {
+        const mapping = await db.user_investor_mappings.findOne({
+          where: { user_id: req.user.id, investor_name: investorName },
+        });
+        if (!mapping) {
+          logger.warn(
+            `Unauthorized investor access attempt by user ${req.user.id} for investor ${investorName}`
+          );
+          return res.status(403).json({
+            success: false,
+            status: 'error',
+            statusCode: 403,
+            errorCode: 'FORBIDDEN_INVESTOR_CONTEXT',
+            message: `You do not have permission to query portfolio data for investor '${investorName}'.`,
+          });
+        }
+      }
+    }
+  }
+
   try {
+    // 1. Fetch live market benchmarks for real-time market grounding
+    const liveIndices = await MarketService.getIndices().catch(() => []);
+    const marketSummaryText = liveIndices.length > 0
+      ? liveIndices
+          .map(
+            (i) =>
+              `- ${i.name} (${i.symbol}): ${i.value.toLocaleString('en-IN')} (${i.changePercent >= 0 ? '+' : ''}${i.changePercent}%) [Exchange: ${i.exchange}]`
+          )
+          .join('\n')
+      : 'Market benchmarks temporarily unavailable.';
+
+    // 2. Format user's specific portfolio context if provided
+    let userContextText = 'No specific portfolio context provided by client.';
+    if (portfolioContext && typeof portfolioContext === 'object') {
+      userContextText = `
+Active Investor Context:
+- Investor: ${portfolioContext.investorName || 'Valued Client'}
+- Current Portfolio Value: ₹${Number(portfolioContext.currentValue || 0).toLocaleString('en-IN')}
+- Total Invested: ₹${Number(portfolioContext.totalInvested || 0).toLocaleString('en-IN')}
+- Absolute Return: ${portfolioContext.gainPercentage || 'N/A'}
+- Net Worth (Including Real Estate, Gold, Assets): ₹${Number(portfolioContext.netWorth || 0).toLocaleString('en-IN')}
+- Active SIP Book: ₹${Number(portfolioContext.sipBook || 0).toLocaleString('en-IN')} / month
+- Top Holdings: ${Array.isArray(portfolioContext.topHoldings) ? portfolioContext.topHoldings.map((h) => `${h.name} (₹${h.value})`).join(', ') : 'Diversified across equity and debt funds'}
+`;
+    }
+
+    // 3. Assemble dynamic enriched system instruction
+    const dynamicSystemInstruction = `
+${BASE_SYSTEM_PROMPT}
+
+─── LIVE MARKET BENCHMARKS (CURRENT TICKS) ───
+${marketSummaryText}
+
+─── ACTIVE CLIENT WEALTH CONTEXT ───
+${userContextText}
+`;
+
     const isGoogleDirect = apiUrl.includes('generativelanguage.googleapis.com/v1beta/models');
     let externalRes;
 
     if (isGoogleDirect) {
       const fullUrl = `${apiUrl}/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
       const payload = {
-        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        systemInstruction: { parts: [{ text: dynamicSystemInstruction }] },
         contents: safeMessages.map((m) => ({
           role: m.role === 'assistant' ? 'model' : 'user',
           parts: [{ text: m.content }],
         })),
-        generationConfig: { temperature: 0.3, maxOutputTokens: 1000 },
+        generationConfig: { temperature: 0.25, maxOutputTokens: 1200 },
       };
 
       externalRes = await fetch(fullUrl, {
@@ -68,8 +135,8 @@ const handleChat = async (req, res) => {
     } else {
       const payload = {
         model,
-        temperature: 0.3,
-        messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...safeMessages],
+        temperature: 0.25,
+        messages: [{ role: 'system', content: dynamicSystemInstruction }, ...safeMessages],
       };
 
       externalRes = await fetch(apiUrl, {
@@ -103,7 +170,7 @@ const handleChat = async (req, res) => {
       return res.status(502).json({ error: 'Empty response received from AI model.' });
     }
 
-    return res.json({ message: extractedText.trim().slice(0, 4000) });
+    return res.json({ message: extractedText.trim() });
   } catch (err) {
     logger.error(`Chat error: ${err.message}`);
     return res.status(502).json({ error: `AI service error: ${err.message}` });

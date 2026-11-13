@@ -2,9 +2,14 @@
 
 const poolConfig = {
   max: parseInt(process.env.DB_POOL_MAX || '10', 10),
-  min: parseInt(process.env.DB_POOL_MIN || '2', 10),
+  min: parseInt(process.env.DB_POOL_MIN || '0', 10),
   acquire: parseInt(process.env.DB_POOL_ACQUIRE || '30000', 10),
   idle: parseInt(process.env.DB_POOL_IDLE || '10000', 10),
+};
+
+const retryConfig = {
+  max: 1,
+  match: [/ECONNRESET/, /ETIMEDOUT/, /EPIPE/, /Connection terminated unexpectedly/],
 };
 
 // If DATABASE_URL is set (e.g. Neon/Vercel/Railway), use it directly;
@@ -23,6 +28,7 @@ const buildConfig = (logging) => {
         },
       },
       pool: poolConfig,
+      retry: retryConfig,
       logging,
     };
   }
@@ -34,6 +40,7 @@ const buildConfig = (logging) => {
     port: parseInt(process.env.DATABASE_PORT || '5432', 10),
     dialect: 'postgres',
     pool: poolConfig,
+    retry: retryConfig,
     logging,
   };
 };
