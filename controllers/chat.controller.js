@@ -1,4 +1,13 @@
 const https = require('https');
+const { createControllerLogger } = require('../utils/logger');
+
+const logger = createControllerLogger('chatController');
+const systemPrompt = `
+You are BrickWealth AI, a concise and practical wealth intelligence assistant.
+Help with portfolio tracking, investment performance, Indian mutual funds, capital gains,
+transaction uploads, and navigation of the BrickWealth platform. Do not claim access to
+personal portfolio data unless the user provides it in the conversation.
+`;
 
 // Fallback verified reference data
 let cachedIndices = [
@@ -6,7 +15,7 @@ let cachedIndices = [
     name: 'NIFTY 50',
     code: 'NIFTY',
     symbol: 'NIFTY 50',
-    value: 25404.10,
+    value: 25404.1,
     pointChange: 281.45,
     percentChange: 1.12,
     isPositive: true,
@@ -18,8 +27,8 @@ let cachedIndices = [
     name: 'BSE SENSEX',
     code: 'SENSEX',
     symbol: 'BSE SENSEX',
-    value: 83512.20,
-    pointChange: 732.10,
+    value: 83512.2,
+    pointChange: 732.1,
     percentChange: 0.88,
     isPositive: true,
     marketStatus: 'OPEN',
@@ -31,7 +40,7 @@ let cachedIndices = [
     code: 'BANKNIFTY',
     symbol: 'NIFTY BANK',
     value: 54273.05,
-    pointChange: -14.30,
+    pointChange: -14.3,
     percentChange: -0.03,
     isPositive: false,
     marketStatus: 'OPEN',
@@ -85,11 +94,7 @@ async function fetchFromYahoo() {
                     ? 'BSE SENSEX'
                     : 'NIFTY BANK';
               const code =
-                r.symbol === '^NSEI'
-                  ? 'NIFTY'
-                  : r.symbol === '^BSESN'
-                    ? 'SENSEX'
-                    : 'BANKNIFTY';
+                r.symbol === '^NSEI' ? 'NIFTY' : r.symbol === '^BSESN' ? 'SENSEX' : 'BANKNIFTY';
 
               return {
                 name,
@@ -162,7 +167,104 @@ const handleGetIndices = async (req, res) => {
   }
 };
 
+const handleChat = async (req, res) => {
+  const { messages } = req.body || {};
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return res.status(400).json({ error: 'Messages array is required.' });
+  }
+
+  const safeMessages = messages
+    .filter(
+      (message) =>
+        message &&
+        (message.role === 'user' || message.role === 'assistant') &&
+        typeof message.content === 'string'
+    )
+    .slice(-10)
+    .map((message) => ({
+      role: message.role,
+      content: message.content.trim().slice(0, 2000),
+    }))
+    .filter((message) => message.content.length > 0);
+
+  if (safeMessages.length === 0) {
+    return res.status(400).json({ error: 'Please enter a message.' });
+  }
+
+  const apiKey = process.env.LLM_API_KEY;
+  if (!apiKey || apiKey === 'your-llm-api-key') {
+    return res.json({
+      message:
+        "I'm your BrickWealth assistant. Ask me about XIRR, SIPs, portfolio tracking, capital gains, or uploading transaction data.",
+    });
+  }
+
+  const apiUrl =
+    process.env.LLM_API_URL ||
+    'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+  const model = process.env.LLM_MODEL || 'gemini-2.5-flash';
+
+  try {
+    const isGoogleDirect = apiUrl.includes('generativelanguage.googleapis.com/v1beta/models');
+    let response;
+
+    if (isGoogleDirect) {
+      const url = `${apiUrl}/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+      response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: safeMessages.map((message) => ({
+            role: message.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: message.content }],
+          })),
+          generationConfig: { temperature: 0.3, maxOutputTokens: 1000 },
+        }),
+      });
+    } else {
+      response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          temperature: 0.3,
+          messages: [{ role: 'system', content: systemPrompt }, ...safeMessages],
+        }),
+      });
+    }
+
+    const data = await response.json().catch(() => null);
+    if (!response.ok) {
+      const errorMessage =
+        data?.error?.message || data?.message || `AI provider returned ${response.status}`;
+      logger.warn(`AI provider error: ${errorMessage}`);
+      return res
+        .status(response.status >= 400 && response.status < 600 ? response.status : 502)
+        .json({
+          error: errorMessage,
+        });
+    }
+
+    const reply =
+      data?.choices?.[0]?.message?.content ||
+      data?.candidates?.[0]?.content?.parts?.map((part) => part.text).join('');
+    if (typeof reply !== 'string' || !reply.trim()) {
+      return res.status(502).json({ error: 'Empty response received from AI model.' });
+    }
+
+    return res.json({ message: reply.trim().slice(0, 4000) });
+  } catch (error) {
+    logger.error(`Chat error: ${error.message}`);
+    return res.status(502).json({ error: `AI service error: ${error.message}` });
+  }
+};
+
 module.exports = {
   getLiveIndices,
   handleGetIndices,
+  handleChat,
 };
